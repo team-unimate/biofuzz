@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'dev.frozenmilk.sinister.sloth.load'
 
 //
 // build.gradle in TeamCode
@@ -26,4 +27,11 @@ android {
 
 dependencies {
     implementation project(':FtcRobotController')
+
+    // Sloth (Dairy Foundation): hot code reload
+    implementation "dev.frozenmilk.sinister:Sloth:0.3.2"
+
+    // Slothboard: Sloth's drop-in replacement for FTC Dashboard, aware of hot-reloaded classes
+    // (lets @Config fields like shooter RPM/PIDF be tuned live without going stale on reload)
+    implementation "com.acmerobotics.slothboard:dashboard:0.3.2+0.6.0"
 }
