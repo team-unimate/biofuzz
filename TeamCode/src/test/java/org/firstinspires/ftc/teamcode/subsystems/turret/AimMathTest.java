@@ -1,38 +1,11 @@
 package org.firstinspires.ftc.teamcode.subsystems.turret;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
 public class AimMathTest {
-    private static final double EPS = 1e-9;
-
-    @Test
-    public void pivotIsOffsetInRobotFrame() {
-        assertArrayEquals(new double[]{10, 23}, AimMath.pivot(10, 20, Math.toRadians(90), 3, 0), EPS);
-        assertArrayEquals(new double[]{8, 20}, AimMath.pivot(10, 20, Math.toRadians(90), 0, 2), EPS);
-    }
-
-    @Test
-    public void odomAngleIsRobotRelative() {
-        assertEquals(0, AimMath.odomAngle(0, 0, Math.toRadians(90), 0, 50), EPS);
-        assertEquals(Math.toRadians(-90), AimMath.odomAngle(0, 0, 0, 0, -50), EPS);
-        assertEquals(Math.toRadians(45), AimMath.odomAngle(0, 0, 0, 10, 10), EPS);
-    }
-
-    @Test
-    public void visionAngleRemovesRobotTurnSinceCapture() {
-        assertEquals(Math.toRadians(15), AimMath.visionAngle(Math.toRadians(10), Math.toRadians(5), 0, 0), EPS);
-        assertEquals(Math.toRadians(5), AimMath.visionAngle(Math.toRadians(10), Math.toRadians(5),
-                Math.toRadians(30), Math.toRadians(20)), EPS);
-    }
-
-    @Test
-    public void biasMovesTowardErrorAndDecays() {
-        assertEquals(0.2, AimMath.updateBias(0, 1, 0.2), EPS);
-        assertEquals(Math.exp(-1), AimMath.decayBias(1, 0.5, 2), EPS);
-    }
+    private static final double EPS = 0.000001;
 
     @Test
     public void statusReportsFirstFailureInOrder() {

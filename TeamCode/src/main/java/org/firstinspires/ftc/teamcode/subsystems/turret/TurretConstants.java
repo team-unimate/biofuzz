@@ -20,8 +20,11 @@ public class TurretConstants {
     public static double TURRET_FWD = 0;
     public static double TURRET_LEFT = 0;
 
-    public static double MIN_ANGLE_DEG = -90;
-    public static double MAX_ANGLE_DEG = 90;
+    public static double TURRET_SOFT_LIMIT_DEG = 90;
+    public static double TURRET_HARD_LIMIT_DEG = 95;
+
+    public static double RED_OFFSET_DEG = 0;
+    public static double BLUE_OFFSET_DEG = 0;
 
     public static double kP = 0.8;
     public static double kI = 0;
@@ -31,7 +34,6 @@ public class TurretConstants {
     public static double kS = 0.04;
     public static double DEADBAND_DEG = 0.75;
 
-    public static double kTurnFF = 0.0;
     public static double MAX_POWER = 1.0;
 
     public static double VELOCITY_FILTER_ALPHA = 0.3;
@@ -39,13 +41,12 @@ public class TurretConstants {
     public static double AIM_TOLERANCE_DEG = 2;
     public static double SETTLED_VEL_DEG_S = 15;
 
-    public static double SHOT_LEAD_S = 0;
     public static double AIM_OFFSET_X_IN = 0;
     public static double AIM_OFFSET_Y_IN = 0;
 
     public static double VISION_MAX_DISAGREE_DEG = 10;
-    public static double BIAS_ALPHA = 0.2;
-    public static double BIAS_DECAY_PER_S = 0.5;
+    public static double VISION_OFFSET_GAIN = 0.2;
+    public static double VISION_OFFSET_FADE = 0.98;
     public static double VISION_LOCK_VALID_MS = 500;
     public static boolean ALLOW_ODOMETRY_ONLY_SHOTS = false;
 

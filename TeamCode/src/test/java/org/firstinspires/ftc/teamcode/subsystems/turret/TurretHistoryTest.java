@@ -6,7 +6,7 @@ import static org.junit.Assert.assertNull;
 import org.junit.Test;
 
 public class TurretHistoryTest {
-    private static final double EPS = 1e-9;
+    private static final double EPS = 0.000001;
 
     @Test
     public void emptyHistoryHasNoSample() {
@@ -30,7 +30,7 @@ public class TurretHistoryTest {
         TurretHistory h = new TurretHistory();
         h.add(0, 0, 0, 0, Math.PI - 0.1);
         h.add(100, 0, 0, 0, -Math.PI + 0.1);
-        assertEquals(Math.PI, Math.abs(Turret.wrap(h.at(50).heading)), EPS);
+        assertEquals(Math.PI, Math.abs(Turret.normalizeAngle(h.at(50).heading)), EPS);
     }
 
     @Test

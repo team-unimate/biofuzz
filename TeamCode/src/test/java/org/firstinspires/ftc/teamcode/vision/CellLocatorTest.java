@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class CellLocatorTest {
-    private static final double EPS = 1e-6;
+    private static final double EPS = 0.000001;
     private static final CellLocator.CameraMount LEVEL = new CellLocator.CameraMount(0, 0, 0, 0, 0);
 
     @Test
@@ -91,6 +91,6 @@ public class CellLocatorTest {
         assertEquals(Math.hypot(30, 30), obs.distance, EPS);
         assertEquals(4, obs.tagCount());
         assertEquals(Arrays.toString(new int[]{42, 43, 44, 45}), Arrays.toString(obs.tagIds));
-        assertEquals(123, obs.captureNanos);
+        assertEquals(123, obs.captureSeconds, EPS);
     }
 }

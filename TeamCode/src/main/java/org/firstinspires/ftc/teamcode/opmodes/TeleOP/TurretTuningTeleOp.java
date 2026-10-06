@@ -93,7 +93,6 @@ public class TurretTuningTeleOp extends CommandOpMode {
         telemetryData.addData("Reachable", turret.isReachable());
         telemetryData.addData("Settled", turret.isSettled());
         telemetryData.addData("Encoder fault", turret.isEncoderFault());
-        telemetryData.addData("Robot turn rate deg/s", Math.toDegrees(turret.getRobotTurnRate()));
         telemetryData.update();
     }
 }

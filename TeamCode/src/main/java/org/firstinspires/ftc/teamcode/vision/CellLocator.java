@@ -143,7 +143,7 @@ public final class CellLocator {
         int[] ids = new int[tags.size()];
         for (int i = 0; i < ids.length; i++) ids[i] = tags.get(i).id;
         return new CellObservation(cell, ids, center[0], center[1], measuredYaw, state,
-                field[0], field[1], at.nanos, at.turretAngle, at.heading);
+                field[0], field[1], at.seconds, at.turretAngle, at.heading);
     }
 
     static HiveCells.State closest(double upError, double downError, double max, double margin) {

@@ -19,10 +19,6 @@ public class ShooterConstants {
 
     public static double VELOCITY_TOLERANCE = 20;
 
-    // Anti-windup bounds on the PIDF controller's accumulated integral (ticks/sec-equivalent).
-    // The controller library defaults to +-1, which saturates almost instantly against
-    // velocity errors in the hundreds/thousands of ticks/sec - these widen it so kI has a
-    // meaningful effect instead of acting like an on/off bias.
     public static double INTEGRAL_MIN = -3000;
     public static double INTEGRAL_MAX = 3000;
 }

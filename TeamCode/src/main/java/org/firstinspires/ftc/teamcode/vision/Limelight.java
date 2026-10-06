@@ -13,6 +13,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.field.HiveCells;
 import org.firstinspires.ftc.teamcode.subsystems.turret.TurretConstants;
 import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.util.Clock;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -73,7 +74,7 @@ public class Limelight extends SubsystemBase {
             clearObservations();
             return;
         }
-        TurretHistory.Sample atCapture = history.at(System.nanoTime() - (long) (frameAgeMs * 1e6));
+        TurretHistory.Sample atCapture = history.at(Clock.seconds() - frameAgeMs / 1000);
         if (atCapture == null) {
             clearObservations();
             return;

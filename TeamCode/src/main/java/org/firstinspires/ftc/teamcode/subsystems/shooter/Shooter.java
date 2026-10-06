@@ -35,7 +35,6 @@ public class Shooter extends SubsystemBase {
         targetRPM = 0;
     }
 
-    /** Bypasses the PIDF loop and drives the flywheel at a fixed power - used for feedforward (kF) characterization. */
     public void setOpenLoopPower(double power) {
         openLoopOverride = true;
         openLoopPower = Range.clip(power, -1, 1);
@@ -46,7 +45,6 @@ public class Shooter extends SubsystemBase {
         openLoopPower = 0;
     }
 
-    /** Clears accumulated integral/derivative state - call between auto-tuner trials. */
     public void resetController() {
         controller.reset();
     }
@@ -81,7 +79,6 @@ public class Shooter extends SubsystemBase {
             return;
         }
 
-        // Re-applied every loop so dashboard edits to ShooterConstants take effect immediately.
         controller.setPIDF(kP, kI, kD, kF);
         controller.setTolerance(VELOCITY_TOLERANCE);
         controller.integrationControl.setIntegrationBounds(INTEGRAL_MIN, INTEGRAL_MAX);

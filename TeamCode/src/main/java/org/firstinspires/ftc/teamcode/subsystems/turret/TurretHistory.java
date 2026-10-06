@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems.turret;
 public class TurretHistory {
     public static final int SIZE = 64;
 
-    private final long[] times = new long[SIZE];
+    private final double[] times = new double[SIZE];
     private final double[] turretAngles = new double[SIZE];
     private final double[] xs = new double[SIZE];
     private final double[] ys = new double[SIZE];
@@ -12,14 +12,14 @@ public class TurretHistory {
     private int next = 0;
 
     public static class Sample {
-        public final long nanos;
+        public final double seconds;
         public final double turretAngle;
         public final double x;
         public final double y;
         public final double heading;
 
-        public Sample(long nanos, double turretAngle, double x, double y, double heading) {
-            this.nanos = nanos;
+        public Sample(double seconds, double turretAngle, double x, double y, double heading) {
+            this.seconds = seconds;
             this.turretAngle = turretAngle;
             this.x = x;
             this.y = y;
@@ -27,8 +27,8 @@ public class TurretHistory {
         }
     }
 
-    public void add(long nanos, double turretAngle, double x, double y, double heading) {
-        times[next] = nanos;
+    public void add(double seconds, double turretAngle, double x, double y, double heading) {
+        times[next] = seconds;
         turretAngles[next] = turretAngle;
         xs[next] = x;
         ys[next] = y;
@@ -37,22 +37,22 @@ public class TurretHistory {
         count = Math.min(count + 1, SIZE);
     }
 
-    public Sample at(long nanos) {
+    public Sample at(double seconds) {
         if (count == 0) return null;
         int newest = (next - 1 + SIZE) % SIZE;
-        if (nanos >= times[newest]) return sample(newest);
+        if (seconds >= times[newest]) return sample(newest);
 
         int later = newest;
         for (int i = 1; i < count; i++) {
             int earlier = (newest - i + SIZE) % SIZE;
-            if (times[earlier] <= nanos) {
-                double t = (double) (nanos - times[earlier]) / (times[later] - times[earlier]);
+            if (times[earlier] <= seconds) {
+                double t = (seconds - times[earlier]) / (times[later] - times[earlier]);
                 return new Sample(
-                        nanos,
+                        seconds,
                         lerp(turretAngles[earlier], turretAngles[later], t),
                         lerp(xs[earlier], xs[later], t),
                         lerp(ys[earlier], ys[later], t),
-                        headings[earlier] + t * Turret.wrap(headings[later] - headings[earlier])
+                        headings[earlier] + t * Turret.normalizeAngle(headings[later] - headings[earlier])
                 );
             }
             later = earlier;

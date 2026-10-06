@@ -18,13 +18,13 @@ public class CellObservation {
 
     public final double fieldX;
     public final double fieldY;
-    public final long captureNanos;
+    public final double captureSeconds;
     public final double turretAngleAtCapture;
     public final double headingAtCapture;
 
     public CellObservation(HiveCells.Cell cell, int[] tagIds, double forward, double left,
                            double rowYaw, HiveCells.State state, double fieldX, double fieldY,
-                           long captureNanos, double turretAngleAtCapture, double headingAtCapture) {
+                           double captureSeconds, double turretAngleAtCapture, double headingAtCapture) {
         this.cell = cell;
         this.tagIds = tagIds;
         this.forward = forward;
@@ -35,7 +35,7 @@ public class CellObservation {
         this.state = state;
         this.fieldX = fieldX;
         this.fieldY = fieldY;
-        this.captureNanos = captureNanos;
+        this.captureSeconds = captureSeconds;
         this.turretAngleAtCapture = turretAngleAtCapture;
         this.headingAtCapture = headingAtCapture;
     }
