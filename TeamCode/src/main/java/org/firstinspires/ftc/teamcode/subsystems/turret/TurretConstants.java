@@ -40,4 +40,27 @@ public class TurretConstants {
 
     public static double AIM_TOLERANCE_DEG = 2;
     public static double SETTLED_VEL_DEG_S = 15;
+
+    public static double SHOT_LEAD_S = 0;
+    public static double AIM_OFFSET_X_IN = 0;
+    public static double AIM_OFFSET_Y_IN = 0;
+
+    public static double VISION_MAX_DISAGREE_DEG = 10;
+    public static double BIAS_ALPHA = 0.2;
+    public static double BIAS_DECAY_PER_S = 0.5;
+    public static double VISION_LOCK_VALID_MS = 500;
+    public static boolean ALLOW_ODOMETRY_ONLY_SHOTS = false;
+
+    public static double HIVE_FLIP_COOLDOWN_MS = 4000;
+
+    public static double MIN_SHOT_DIST = 24;
+    public static double MAX_SHOT_DIST = 120;
+
+    public static String SHOOTER_NAME = "shooter";
+    public static boolean SHOOTER_REVERSED = false;
+    public static double[] SHOOTER_DIST_IN = {24, 48, 72, 96, 120};
+    public static double[] SHOOTER_VEL = {1000, 1200, 1400, 1600, 1800};
+    public static double SHOOTER_TOLERANCE = 40;
+    public static boolean TUNING_SHOOTER = false;
+    public static double TUNING_VELOCITY = 1200;
 }
