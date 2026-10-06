@@ -13,19 +13,21 @@ import com.seattlesolvers.solverslib.util.TelemetryData;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
 import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.vision.CellLocator;
+import org.firstinspires.ftc.teamcode.vision.CellObservation;
+import org.firstinspires.ftc.teamcode.vision.Limelight;
 
-@TeleOp(name = "Turret Tuning", group = "Tuning")
-public class TurretTuningTeleOp extends CommandOpMode {
+@TeleOp(name = "Vision Test", group = "Tuning")
+public class VisionTestTeleOp extends CommandOpMode {
     private static final double STEP_DEG = 15;
 
     private Follower follower;
     private Turret turret;
+    private Limelight limelight;
     private GamepadEx gamepadEx1;
     private TelemetryData telemetryData;
 
     private double targetDeg = 0;
-    private boolean fieldLock = false;
-    private double fieldAngle = 0;
     private boolean limp = false;
 
     @Override
@@ -33,8 +35,11 @@ public class TurretTuningTeleOp extends CommandOpMode {
         super.reset();
 
         follower = Constants.createFollower(hardwareMap);
-        turret = new Turret(hardwareMap, new TurretHistory());
-        register(turret);
+        TurretHistory history = new TurretHistory();
+        limelight = new Limelight(hardwareMap, history);
+        turret = new Turret(hardwareMap, history);
+
+        register(limelight, turret);
 
         gamepadEx1 = new GamepadEx(gamepad1);
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
@@ -43,24 +48,10 @@ public class TurretTuningTeleOp extends CommandOpMode {
         gamepadEx1.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(() -> targetDeg += STEP_DEG);
         gamepadEx1.getGamepadButton(GamepadKeys.Button.DPAD_RIGHT).whenPressed(() -> targetDeg -= STEP_DEG);
         gamepadEx1.getGamepadButton(GamepadKeys.Button.A).whenPressed(() -> targetDeg = 0);
-        gamepadEx1.getGamepadButton(GamepadKeys.Button.B).whenPressed(() -> {
-            fieldLock = !fieldLock;
-
-            fieldAngle = Math.toRadians(targetDeg) + follower.pose().heading();
-        });
         gamepadEx1.getGamepadButton(GamepadKeys.Button.X).whenPressed(() -> {
             limp = !limp;
             turret.setLimp(limp);
         });
-    }
-
-    @Override
-    public void initialize_loop() {
-        turret.readEncoder();
-        telemetryData.addData("Raw deg", turret.getRawDeg());
-        telemetryData.addData("Angle deg", Math.toDegrees(turret.getAngle()));
-        telemetryData.addData("Encoder fault", turret.isEncoderFault());
-        telemetryData.update();
     }
 
     @Override
@@ -73,27 +64,31 @@ public class TurretTuningTeleOp extends CommandOpMode {
         ));
         follower.update();
         turret.updateBotPose(follower.pose());
-
-        if (fieldLock) {
-            targetDeg = Math.toDegrees(fieldAngle - follower.pose().heading());
-        }
         turret.setTargetAngle(Math.toRadians(targetDeg));
 
         super.run();
 
-        telemetryData.addData("Controls", "dpad L/R = +-15 deg, A = 0, B = field lock, X = limp (hand-turn)");
-        telemetryData.addData("Field lock", fieldLock);
-        telemetryData.addData("Limp", limp);
-        telemetryData.addData("Raw deg", turret.getRawDeg());
-        telemetryData.addData("Angle deg", Math.toDegrees(turret.getAngle()));
-        telemetryData.addData("Target deg", Math.toDegrees(turret.getCommandedTarget()));
-        telemetryData.addData("Error deg", Math.toDegrees(turret.getCommandedTarget() - turret.getAngle()));
-        telemetryData.addData("Velocity deg/s", Math.toDegrees(turret.getVelocity()));
-        telemetryData.addData("Power", turret.getPower());
-        telemetryData.addData("Reachable", turret.isReachable());
-        telemetryData.addData("Settled", turret.isSettled());
-        telemetryData.addData("Encoder fault", turret.isEncoderFault());
-        telemetryData.addData("Robot turn rate deg/s", Math.toDegrees(turret.getRobotTurnRate()));
+        telemetryData.addData("Controls", "dpad L/R = turret +-15 deg, A = 0, X = limp");
+        telemetryData.addData("Limelight connected", limelight.isConnected());
+        telemetryData.addData("Frame age ms", limelight.getFrameAgeMs());
+        telemetryData.addData("Turret deg", Math.toDegrees(turret.getAngle()));
+
+        StringBuilder ids = new StringBuilder();
+        for (CellLocator.TagPoint tag : limelight.getTagPoints()) {
+            ids.append(tag.id).append(' ');
+            telemetryData.addData("Tag " + tag.id + " fwd/left/up in",
+                    String.format("%.1f / %.1f / %.1f", tag.forward, tag.left, tag.up));
+        }
+        telemetryData.addData("Seen tag IDs", ids.toString().trim());
+
+        for (CellObservation obs : limelight.getObservations().values()) {
+            telemetryData.addData(obs.cell + " tags", obs.tagCount());
+            telemetryData.addData(obs.cell + " bearing deg", Math.toDegrees(obs.bearing));
+            telemetryData.addData(obs.cell + " distance in", obs.distance);
+            telemetryData.addData(obs.cell + " row yaw deg", Math.toDegrees(obs.rowYaw));
+            telemetryData.addData(obs.cell + " state", obs.state);
+            telemetryData.addData(obs.cell + " field x/y", String.format("%.1f / %.1f", obs.fieldX, obs.fieldY));
+        }
         telemetryData.update();
     }
 }

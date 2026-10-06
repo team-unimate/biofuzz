@@ -11,19 +11,10 @@ import com.qualcomm.robotcore.util.Range;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDFController;
 
-/**
- * Turret driven by one stemOS Taura in continuous mode, with the Taura's analog feedback used as an
- * absolute encoder (see TURRET.md, "Hardware" and steps 1 and 6).
- * <p>
- * The turret's whole range fits inside one sensor turn, so the angle is read directly from the raw
- * reading every loop: no zeroing at init, no unwrapping. All angles are radians, robot-relative,
- * 0 = forward, CCW positive.
- * <p>
- * Loop order in OpModes: {@code follower.update()} -> {@link #updateBotPose(Pose)} -> {@code super.run()}.
- */
 public class Turret extends SubsystemBase {
     private final CRServo servo;
     private final AnalogInput encoder;
+    private final TurretHistory history;
     private final PIDFController controller = new PIDFController(kP, kI, kD, kF);
 
     private double requestedTarget = 0;
@@ -43,12 +34,12 @@ public class Turret extends SubsystemBase {
     private double robotTurnRate = 0;
     private long previousPoseNanos = -1;
 
-    public Turret(HardwareMap hardwareMap) {
+    public Turret(HardwareMap hardwareMap, TurretHistory history) {
+        this.history = history;
         servo = hardwareMap.get(CRServo.class, SERVO_NAME);
         encoder = hardwareMap.get(AnalogInput.class, ENCODER_NAME);
     }
 
-    /** Robot pose from the follower, once per loop before the scheduler runs. Also measures robot turn rate. */
     public void updateBotPose(Pose pose) {
         long now = System.nanoTime();
         if (previousPoseNanos > 0) {
@@ -62,20 +53,14 @@ public class Turret extends SubsystemBase {
         botPose = pose;
     }
 
-    /** Robot-relative target angle (radians). Any angle is accepted; see {@link #isReachable()}. */
     public void setTargetAngle(double radians) {
         requestedTarget = radians;
     }
 
-    /** When true the turret gets zero power (so it can be turned by hand); the encoder is still read. */
     public void setLimp(boolean limp) {
         this.limp = limp;
     }
 
-    /**
-     * Reads the encoder only, without driving the servo. Safe to call during init (robots must not
-     * move before start). {@link #periodic()} calls it too.
-     */
     public void readEncoder() {
         rawDeg = encoder.getVoltage() / encoder.getMaxVoltage() * RAW_RANGE_DEG;
         encoderFault = Double.isNaN(rawDeg) || Math.abs(rawDeg - ZERO_RAW_DEG) > RAW_SANITY_MARGIN_DEG;
@@ -104,6 +89,7 @@ public class Turret extends SubsystemBase {
         }
         previousAngleNanos = now;
         previousAngle = angle;
+        history.add(now, angle, botPose.x(), botPose.y(), botPose.heading());
 
         double min = Math.toRadians(MIN_ANGLE_DEG);
         double max = Math.toRadians(MAX_ANGLE_DEG);
@@ -111,7 +97,6 @@ public class Turret extends SubsystemBase {
         reachable = !Double.isNaN(equivalent);
         commandedTarget = reachable ? equivalent : nearestLimit(requestedTarget, min, max);
 
-        // Re-applied every loop so dashboard edits take effect immediately.
         controller.setPIDF(kP, kI, kD, kF);
         double error = commandedTarget - angle;
         double output = controller.calculate(angle, commandedTarget);
@@ -121,7 +106,6 @@ public class Turret extends SubsystemBase {
         output += kTurnFF * -robotTurnRate;
         output = Range.clip(output, -MAX_POWER, MAX_POWER);
 
-        // Never push past the soft limits.
         if (limp || (angle >= max && output > 0) || (angle <= min && output < 0)) {
             output = 0;
         }
@@ -130,17 +114,15 @@ public class Turret extends SubsystemBase {
 
     private void setPower(double output) {
         power = output;
-        // CRServo power p is sent as servo position 0.5 + 0.5 * p.
+
         servo.setPower(output);
     }
 
-    /** Raw sensor degrees -> turret radians. */
     static double rawToAngle(double rawDeg, double zeroRawDeg, double gearRatio, boolean reversed) {
         double turretDeg = (rawDeg - zeroRawDeg) / gearRatio;
         return Math.toRadians(reversed ? -turretDeg : turretDeg);
     }
 
-    /** The equivalent of {@code target} (+-2pi) inside [min, max] closest to {@code current}, or NaN if none fits. */
     static double reachableEquivalent(double target, double current, double min, double max) {
         double best = Double.NaN;
         double base = wrap(target);
@@ -154,12 +136,10 @@ public class Turret extends SubsystemBase {
         return best;
     }
 
-    /** The soft limit angularly closest to an unreachable target. */
     static double nearestLimit(double target, double min, double max) {
         return Math.abs(wrap(target - min)) <= Math.abs(wrap(target - max)) ? min : max;
     }
 
-    /** Wrap to -pi..pi. */
     static double wrap(double radians) {
         return Math.atan2(Math.sin(radians), Math.cos(radians));
     }
@@ -168,7 +148,6 @@ public class Turret extends SubsystemBase {
         return angle;
     }
 
-    /** Turret angular velocity, rad/s, filtered. */
     public double getVelocity() {
         return velocity;
     }
@@ -177,7 +156,6 @@ public class Turret extends SubsystemBase {
         return requestedTarget;
     }
 
-    /** What the controller is actually driving to (the requested target, or a soft limit if out of range). */
     public double getCommandedTarget() {
         return commandedTarget;
     }
@@ -204,7 +182,6 @@ public class Turret extends SubsystemBase {
         return power;
     }
 
-    /** Robot turn rate, rad/s, filtered, measured from {@link #updateBotPose(Pose)}. */
     public double getRobotTurnRate() {
         return robotTurnRate;
     }
