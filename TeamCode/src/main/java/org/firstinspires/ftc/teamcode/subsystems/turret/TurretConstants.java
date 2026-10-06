@@ -13,8 +13,6 @@ public class TurretConstants {
 
     public static double GEAR_RATIO = 25.0 / 20.0;
 
-    public static double RAW_RANGE_DEG = 315;
-
     public static double ZERO_RAW_DEG = 157.5;
 
     public static double RAW_SANITY_MARGIN_DEG = 125;

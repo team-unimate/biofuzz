@@ -4,16 +4,17 @@ import static org.firstinspires.ftc.teamcode.subsystems.turret.TurretConstants.*
 
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.hardware.AnalogInput;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDFController;
 import com.seattlesolvers.solverslib.util.InterpLUT;
 
+import org.firstinspires.ftc.teamcode.TauraServo;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.HiveCells;
 import org.firstinspires.ftc.teamcode.vision.CellObservation;
@@ -22,7 +23,7 @@ import org.firstinspires.ftc.teamcode.vision.Limelight;
 public class Turret extends SubsystemBase {
     public enum VisionState {NONE, LOCKED, REJECTED, DOWN}
 
-    private final CRServo servo;
+    private final TauraServo servo;
     private final AnalogInput encoder;
     private final DcMotorEx shooter;
     private final Limelight vision;
@@ -76,8 +77,9 @@ public class Turret extends SubsystemBase {
     public Turret(HardwareMap hardwareMap, Limelight vision, TurretHistory history) {
         this.vision = vision;
         this.history = history;
-        servo = hardwareMap.get(CRServo.class, SERVO_NAME);
+        servo = new TauraServo(hardwareMap.get(Servo.class, SERVO_NAME));
         encoder = hardwareMap.get(AnalogInput.class, ENCODER_NAME);
+        servo.setAnalogFeedbackSensor(encoder);
         shooter = hardwareMap.get(DcMotorEx.class, SHOOTER_NAME);
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -141,7 +143,7 @@ public class Turret extends SubsystemBase {
     }
 
     public void readEncoder() {
-        rawDeg = encoder.getVoltage() / encoder.getMaxVoltage() * RAW_RANGE_DEG;
+        rawDeg = servo.getRawPositionInDegrees();
         encoderFault = Double.isNaN(rawDeg) || Math.abs(rawDeg - ZERO_RAW_DEG) > RAW_SANITY_MARGIN_DEG;
         if (!encoderFault) {
             angle = rawToAngle(rawDeg, ZERO_RAW_DEG, GEAR_RATIO, ENCODER_REVERSED);
@@ -234,7 +236,7 @@ public class Turret extends SubsystemBase {
     }
 
     private void updateTurret(long now) {
-        servo.setDirection(SERVO_REVERSED ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
+        servo.setDirection(SERVO_REVERSED ? Servo.Direction.REVERSE : Servo.Direction.FORWARD);
 
         readEncoder();
         if (encoderFault) {
@@ -292,7 +294,7 @@ public class Turret extends SubsystemBase {
 
     private void setPower(double output) {
         power = output;
-        servo.setPower(output);
+        servo.setPosition(0.5 + 0.5 * output);
     }
 
     private boolean hasRecentVision(long now) {
