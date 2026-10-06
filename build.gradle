@@ -8,6 +8,13 @@ buildscript {
     repositories {
         mavenCentral()
         google()
+        maven {
+            url = "https://repo.dairy.foundation/releases"
+        }
+    }
+    dependencies {
+        // Sloth (Dairy Foundation): hot code reload for FTC
+        classpath "dev.frozenmilk:Load:0.3.2"
     }
 }
 
