@@ -75,22 +75,22 @@ public class CellLocatorTest {
     }
 
     @Test
-    public void stateNeedsAClearWinnerWithinRange() {
-        assertEquals(HiveCells.State.UP, CellLocator.closest(1, 10, 8, 2));
-        assertEquals(HiveCells.State.DOWN, CellLocator.closest(10, 1, 8, 2));
-        assertEquals(HiveCells.State.UNKNOWN, CellLocator.closest(3, 4, 8, 2));
-        assertEquals(HiveCells.State.UNKNOWN, CellLocator.closest(9, 20, 8, 2));
-    }
-
-    @Test
     public void observationReportsBearingDistanceAndTagIds() {
         TurretHistory.Sample at = new TurretHistory.Sample(123, 0, 0, 0, 0);
-        CellLocator.StateGates gates = new CellLocator.StateGates(8, 2, Math.toRadians(30));
-        CellObservation obs = CellLocator.locate(HiveCells.Cell.BLUE_FAR, row(30, 30, 0.3, 0, 1, 2, 3), at, 0, 0, gates);
+        CellObservation obs = CellLocator.locate(HiveCells.Cell.BLUE_FAR, row(30, 30, 0.3, 0, 1, 2, 3), at, 0, 0);
         assertEquals(Math.toRadians(45), obs.bearing, EPS);
         assertEquals(Math.hypot(30, 30), obs.distance, EPS);
         assertEquals(4, obs.tagCount());
         assertEquals(Arrays.toString(new int[]{42, 43, 44, 45}), Arrays.toString(obs.tagIds));
         assertEquals(123, obs.captureNanos);
+    }
+
+    @Test
+    public void oneTagUsesCellHeadingForRowDirection() {
+        TurretHistory.Sample at = new TurretHistory.Sample(0, 0, 0, 0, 0);
+        double yaw = HiveCells.Cell.BLUE_FAR.pose.heading();
+        CellObservation obs = CellLocator.locate(HiveCells.Cell.BLUE_FAR, row(30, 5, yaw, 3), at, 0, 0);
+        assertEquals(30, obs.forward, EPS);
+        assertEquals(5, obs.left, EPS);
     }
 }

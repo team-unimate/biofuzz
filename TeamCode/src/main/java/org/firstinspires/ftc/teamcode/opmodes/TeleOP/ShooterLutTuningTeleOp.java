@@ -13,7 +13,6 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.util.TelemetryData;
 
 import org.firstinspires.ftc.teamcode.field.Field;
-import org.firstinspires.ftc.teamcode.field.HiveCells;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.turret.ShotTable;
 import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
@@ -39,7 +38,6 @@ public class ShooterLutTuningTeleOp extends CommandOpMode {
     private ShotTable shotTable;
 
     private Field.Alliance alliance;
-    private HiveCells.Cell startCell;
     private boolean useSavedPose;
     private double velocity;
 
@@ -59,7 +57,6 @@ public class ShooterLutTuningTeleOp extends CommandOpMode {
         shotTable = new ShotTable(MERGE_DISTANCE_IN);
 
         alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
-        startCell = PosePersistency.getUpCell();
         useSavedPose = PosePersistency.hasPose();
         velocity = START_VELOCITY;
 
@@ -75,14 +72,10 @@ public class ShooterLutTuningTeleOp extends CommandOpMode {
     public void initialize_loop() {
         if (gamepad1.x) alliance = Field.Alliance.BLUE;
         if (gamepad1.b) alliance = Field.Alliance.RED;
-        if (gamepad1.dpad_up) startCell = alliance == Field.Alliance.RED ? HiveCells.Cell.RED_FAR : HiveCells.Cell.BLUE_FAR;
-        if (gamepad1.dpad_down) startCell = alliance == Field.Alliance.RED ? HiveCells.Cell.RED_AUDIENCE : HiveCells.Cell.BLUE_AUDIENCE;
         if (gamepad1.y) useSavedPose = false;
-        if (startCell != null && startCell.alliance != alliance) startCell = null;
 
-        telemetryData.addData("Controls", "X = BLUE, B = RED, dpad up = FAR up, dpad down = AUDIENCE up, Y = ignore saved pose");
+        telemetryData.addData("Controls", "X = BLUE, B = RED, Y = ignore saved pose");
         telemetryData.addData("Alliance", alliance);
-        telemetryData.addData("Start up cell", startCell == null ? "not set" : startCell);
         telemetryData.addData("Start pose", useSavedPose ? "saved " + PosePersistency.getPose(null) : "dashboard START_*");
         telemetryData.update();
     }
@@ -92,8 +85,6 @@ public class ShooterLutTuningTeleOp extends CommandOpMode {
         Pose start = new Pose(START_X_IN, START_Y_IN, Math.toRadians(START_HEADING_DEG));
         follower.setPose(useSavedPose ? PosePersistency.getPose(start) : start);
         turret.setAlliance(alliance);
-        if (startCell != null) turret.setUpCell(startCell);
-        turret.setAutoAim(true);
     }
 
     @Override
@@ -114,8 +105,8 @@ public class ShooterLutTuningTeleOp extends CommandOpMode {
         telemetryData.addData("Controls", "RT = spin, dpad up/down = +-" + COARSE_STEP + ", dpad R/L = +-" + FINE_STEP
                 + ", A = record, B = undo");
         telemetryData.addData("Distance in", turret.getDistance());
-        telemetryData.addData("Status", turret.getStatus());
-        telemetryData.addData("Vision", turret.getVisionState());
+        telemetryData.addData("Tags seen", turret.isSeen());
+        telemetryData.addData("Too close", turret.isTooClose());
         telemetryData.addData("Target velocity", velocity);
         telemetryData.addData("Shooter velocity", turret.getShooterVelocity());
         telemetryData.addData("Recorded", shotTable.size());

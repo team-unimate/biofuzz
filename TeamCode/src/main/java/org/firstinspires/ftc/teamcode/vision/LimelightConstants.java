@@ -17,8 +17,4 @@ public class LimelightConstants {
     public static double CAM_YAW_DEG = 0;
 
     public static double MAX_AGE_MS = 100;
-
-    public static double STATE_MATCH_MAX_IN = 8;
-    public static double STATE_TIE_MARGIN_IN = 2;
-    public static double STATE_YAW_MARGIN_DEG = 30;
 }

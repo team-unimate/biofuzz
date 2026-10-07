@@ -26,7 +26,6 @@ public class TurretTuningTeleOp extends CommandOpMode {
     private double targetDeg = 0;
     private boolean fieldLock = false;
     private double fieldAngle = 0;
-    private boolean limp = false;
 
     @Override
     public void initialize() {
@@ -47,10 +46,6 @@ public class TurretTuningTeleOp extends CommandOpMode {
             fieldLock = !fieldLock;
 
             fieldAngle = Math.toRadians(targetDeg) + follower.pose().heading();
-        });
-        gamepadEx1.getGamepadButton(GamepadKeys.Button.X).whenPressed(() -> {
-            limp = !limp;
-            turret.setLimp(limp);
         });
     }
 
@@ -77,23 +72,21 @@ public class TurretTuningTeleOp extends CommandOpMode {
         if (fieldLock) {
             targetDeg = Math.toDegrees(fieldAngle - follower.pose().heading());
         }
-        turret.setTargetAngle(Math.toRadians(targetDeg));
+        turret.setManualAngle(Math.toRadians(targetDeg));
 
         super.run();
 
-        telemetryData.addData("Controls", "dpad L/R = +-15 deg, A = 0, B = field lock, X = limp (hand-turn)");
+        telemetryData.addData("Controls", "dpad L/R = +-15 deg, A = 0, B = field lock, hand-turn only during init");
         telemetryData.addData("Field lock", fieldLock);
-        telemetryData.addData("Limp", limp);
         telemetryData.addData("Raw deg", turret.getRawDeg());
         telemetryData.addData("Angle deg", Math.toDegrees(turret.getAngle()));
-        telemetryData.addData("Target deg", Math.toDegrees(turret.getCommandedTarget()));
-        telemetryData.addData("Error deg", Math.toDegrees(turret.getCommandedTarget() - turret.getAngle()));
+        telemetryData.addData("Target deg", Math.toDegrees(turret.getSetpoint()));
+        telemetryData.addData("Error deg", Math.toDegrees(turret.getSetpoint() - turret.getAngle()));
         telemetryData.addData("Velocity deg/s", Math.toDegrees(turret.getVelocity()));
         telemetryData.addData("Power", turret.getPower());
-        telemetryData.addData("Reachable", turret.isReachable());
+        telemetryData.addData("In range", turret.isInRange());
         telemetryData.addData("Settled", turret.isSettled());
         telemetryData.addData("Encoder fault", turret.isEncoderFault());
-        telemetryData.addData("Robot turn rate deg/s", Math.toDegrees(turret.getRobotTurnRate()));
         telemetryData.update();
     }
 }

@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.util.Range;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.controller.PIDFController;
 import com.seattlesolvers.solverslib.util.InterpLUT;
+import com.seattlesolvers.solverslib.util.TelemetryData;
 
 import org.firstinspires.ftc.teamcode.TauraServo;
 import org.firstinspires.ftc.teamcode.field.Field;
@@ -21,50 +22,35 @@ import org.firstinspires.ftc.teamcode.vision.CellObservation;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
 public class Turret extends SubsystemBase {
-    public enum VisionState {NONE, LOCKED, REJECTED, DOWN}
-
     private final TauraServo servo;
-    private final AnalogInput encoder;
     private final DcMotorEx shooter;
     private final Limelight vision;
     private final TurretHistory history;
     private final PIDFController controller = new PIDFController(kP, kI, kD, kF);
     private final InterpLUT shooterTable = new InterpLUT();
 
-    private double requestedTarget = 0;
-    private double commandedTarget = 0;
-    private boolean reachable = true;
-    private boolean limp = false;
-    private boolean autoAim = false;
+    private Pose botPose = new Pose(0, 0, 0);
+    private Field.Alliance alliance = null;
+    private HiveCells.Cell cell = null;
 
+    private double manualAngle = Double.NaN;
     private double rawDeg = 0;
     private boolean encoderFault = false;
     private double angle = 0;
     private double velocity = 0;
     private double power = 0;
-    private long previousAngleNanos = -1;
+    private long previousNanos = -1;
     private double previousAngle = 0;
 
-    private Pose botPose = new Pose(0, 0, 0);
-    private double robotTurnRate = 0;
-    private double robotVelX = 0;
-    private double robotVelY = 0;
-    private long previousPoseNanos = -1;
-
-    private Field.Alliance alliance = null;
-    private HiveCells.Cell upCell = null;
-    private boolean upCellConfirmed = false;
-    private long lastFlipNanos = -1;
-
     private double odomAngle = 0;
-    private double odomDistance = Double.NaN;
     private double bias = 0;
-    private double visionDistance = Double.NaN;
+    private double target = 0;
+    private double setpoint = 0;
+    private boolean inRange = true;
     private double distance = Double.NaN;
-    private long lastVisionLockNanos = -1;
-    private long previousAimNanos = -1;
-    private VisionState visionState = VisionState.NONE;
-    private CellObservation lastObservation = null;
+    private double visionDistance = Double.NaN;
+    private long lastSeenNanos = -1;
+    private boolean seen = false;
 
     private boolean shooterEnabled = false;
     private double shooterTarget = 0;
@@ -78,8 +64,7 @@ public class Turret extends SubsystemBase {
         this.vision = vision;
         this.history = history;
         servo = new TauraServo(hardwareMap.get(Servo.class, SERVO_NAME));
-        encoder = hardwareMap.get(AnalogInput.class, ENCODER_NAME);
-        servo.setAnalogFeedbackSensor(encoder);
+        servo.setAnalogFeedbackSensor(hardwareMap.get(AnalogInput.class, ENCODER_NAME));
         shooter = hardwareMap.get(DcMotorEx.class, SHOOTER_NAME);
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -90,44 +75,23 @@ public class Turret extends SubsystemBase {
     }
 
     public void updateBotPose(Pose pose) {
-        long now = System.nanoTime();
-        if (previousPoseNanos > 0) {
-            double dt = (now - previousPoseNanos) * 1e-9;
-            if (dt > 1e-4) {
-                double rate = wrap(pose.heading() - botPose.heading()) / dt;
-                robotTurnRate += VELOCITY_FILTER_ALPHA * (rate - robotTurnRate);
-                robotVelX += VELOCITY_FILTER_ALPHA * ((pose.x() - botPose.x()) / dt - robotVelX);
-                robotVelY += VELOCITY_FILTER_ALPHA * ((pose.y() - botPose.y()) / dt - robotVelY);
-            }
-        }
-        previousPoseNanos = now;
         botPose = pose;
-    }
-
-    public void setTargetAngle(double radians) {
-        requestedTarget = radians;
-    }
-
-    public void setLimp(boolean limp) {
-        this.limp = limp;
-    }
-
-    public void setAutoAim(boolean autoAim) {
-        this.autoAim = autoAim;
     }
 
     public void setAlliance(Field.Alliance alliance) {
         if (alliance != this.alliance) {
-            upCell = null;
-            upCellConfirmed = false;
             bias = 0;
+            lastSeenNanos = -1;
         }
         this.alliance = alliance;
     }
 
-    public void setUpCell(HiveCells.Cell cell) {
-        upCell = cell;
-        upCellConfirmed = false;
+    public void setManualAngle(double radians) {
+        manualAngle = radians;
+    }
+
+    public void clearManualAngle() {
+        manualAngle = Double.NaN;
     }
 
     public void setShooterEnabled(boolean enabled) {
@@ -136,10 +100,6 @@ public class Turret extends SubsystemBase {
 
     public void setShooterOverride(double ticksPerSecond) {
         shooterOverride = ticksPerSecond;
-    }
-
-    public void clearShooterOverride() {
-        shooterOverride = Double.NaN;
     }
 
     public void readEncoder() {
@@ -153,86 +113,45 @@ public class Turret extends SubsystemBase {
     @Override
     public void periodic() {
         long now = System.nanoTime();
-        if (autoAim) {
-            updateAim(now);
-        }
+        updateAim(now);
         updateTurret(now);
         updateShooter();
     }
 
     private void updateAim(long now) {
-        double dt = previousAimNanos > 0 ? (now - previousAimNanos) * 1e-9 : 0;
-        previousAimNanos = now;
-
-        updateUpCell(now);
-        if (upCell == null) {
-            odomDistance = Double.NaN;
+        double dt = previousNanos > 0 ? (now - previousNanos) * 1e-9 : 0;
+        HiveCells.Cell nextCell = alliance == null ? null : HiveCells.forRobot(alliance, botPose);
+        if (nextCell != cell) {
+            cell = nextCell;
+            bias = 0;
+            lastSeenNanos = -1;
+        }
+        if (cell == null) {
+            target = 0;
             distance = Double.NaN;
-            visionState = VisionState.NONE;
-            requestedTarget = 0;
+            seen = false;
             return;
         }
 
-        Pose cellPose = upCell.pose(HiveCells.State.UP);
-        double aimX = cellPose.x() + AIM_OFFSET_X_IN;
-        double aimY = cellPose.y() + AIM_OFFSET_Y_IN;
+        double[] pivot = pivot(botPose.x(), botPose.y(), botPose.heading(), TURRET_FWD, TURRET_LEFT);
+        odomAngle = odomAngle(pivot[0], pivot[1], botPose.heading(), cell.pose.x(), cell.pose.y());
+        double odomDistance = Math.hypot(cell.pose.x() - pivot[0], cell.pose.y() - pivot[1]);
 
-        double[] pivotNow = AimMath.pivot(botPose.x(), botPose.y(), botPose.heading(), TURRET_FWD, TURRET_LEFT);
-        double odomAngleNow = AimMath.odomAngle(pivotNow[0], pivotNow[1], botPose.heading(), aimX, aimY);
-
-        double[] pivotLead = AimMath.pivot(botPose.x() + robotVelX * SHOT_LEAD_S, botPose.y() + robotVelY * SHOT_LEAD_S,
-                botPose.heading(), TURRET_FWD, TURRET_LEFT);
-        odomAngle = AimMath.odomAngle(pivotLead[0], pivotLead[1], botPose.heading(), aimX, aimY);
-        odomDistance = Math.hypot(aimX - pivotLead[0], aimY - pivotLead[1]);
-
-        CellObservation obs = vision != null && vision.hasNewFrame() ? vision.getObservation(upCell) : null;
+        CellObservation obs = vision != null && vision.hasNewFrame() ? vision.getObservation(cell) : null;
         if (obs != null) {
-            lastObservation = obs;
-            if (obs.state == HiveCells.State.DOWN) {
-                visionState = VisionState.DOWN;
-            } else {
-                double visionAngle = AimMath.visionAngle(obs.turretAngleAtCapture, obs.bearing,
-                        botPose.heading(), obs.headingAtCapture);
-                double error = wrap(visionAngle - odomAngleNow);
-                if (Math.abs(error) > Math.toRadians(VISION_MAX_DISAGREE_DEG)) {
-                    visionState = VisionState.REJECTED;
-                } else {
-                    bias = AimMath.updateBias(bias, error, BIAS_ALPHA);
-                    visionDistance = obs.distance;
-                    lastVisionLockNanos = now;
-                    visionState = VisionState.LOCKED;
-                }
+            double visionAngle = visionAngle(obs.turretAngleAtCapture, obs.bearing, botPose.heading(), obs.headingAtCapture);
+            double error = wrap(visionAngle - odomAngle);
+            if (Math.abs(error) <= Math.toRadians(VISION_MAX_DISAGREE_DEG)) {
+                bias = error;
+                visionDistance = obs.distance;
+                lastSeenNanos = now;
             }
         }
 
-        boolean recentVision = hasRecentVision(now);
-        if (!recentVision) {
-            bias = AimMath.decayBias(bias, BIAS_DECAY_PER_S, dt);
-            if (obs == null) visionState = VisionState.NONE;
-        }
-        distance = recentVision ? visionDistance : odomDistance;
-        requestedTarget = wrap(odomAngle + bias);
-    }
-
-    private void updateUpCell(long now) {
-        if (alliance == null || vision == null || !vision.hasNewFrame()) return;
-        HiveCells.Cell seenUp = null;
-        for (HiveCells.Cell cell : HiveCells.Cell.values()) {
-            if (cell.alliance != alliance) continue;
-            CellObservation obs = vision.getObservation(cell);
-            if (obs == null) continue;
-            if (obs.state == HiveCells.State.UP) seenUp = cell;
-            else if (obs.state == HiveCells.State.DOWN) seenUp = cell.partner();
-            if (seenUp != null) break;
-        }
-        if (seenUp == null) return;
-        if (upCell != null && seenUp != upCell) {
-            lastFlipNanos = now;
-            bias = 0;
-            lastVisionLockNanos = -1;
-        }
-        upCell = seenUp;
-        upCellConfirmed = true;
+        seen = lastSeenNanos > 0 && (now - lastSeenNanos) * 1e-6 <= VISION_LOCK_VALID_MS;
+        if (!seen) bias *= Math.exp(-BIAS_DECAY_PER_S * dt);
+        target = wrap(odomAngle + bias);
+        distance = seen ? visionDistance : odomDistance;
     }
 
     private void updateTurret(long now) {
@@ -241,38 +160,31 @@ public class Turret extends SubsystemBase {
         readEncoder();
         if (encoderFault) {
             setPower(0);
-            previousAngleNanos = -1;
+            previousNanos = -1;
             return;
         }
 
-        if (previousAngleNanos > 0) {
-            double dt = (now - previousAngleNanos) * 1e-9;
-            if (dt > 1e-4) {
-                velocity += VELOCITY_FILTER_ALPHA * ((angle - previousAngle) / dt - velocity);
-            }
+        if (previousNanos > 0) {
+            double dt = (now - previousNanos) * 1e-9;
+            if (dt > 1e-4) velocity += VELOCITY_FILTER_ALPHA * ((angle - previousAngle) / dt - velocity);
         }
-        previousAngleNanos = now;
+        previousNanos = now;
         previousAngle = angle;
         history.add(now, angle, botPose.x(), botPose.y(), botPose.heading());
 
         double min = Math.toRadians(MIN_ANGLE_DEG);
         double max = Math.toRadians(MAX_ANGLE_DEG);
-        double equivalent = reachableEquivalent(requestedTarget, angle, min, max);
-        reachable = !Double.isNaN(equivalent);
-        commandedTarget = reachable ? equivalent : nearestLimit(requestedTarget, min, max);
+        double goal = Double.isNaN(manualAngle) ? target : manualAngle;
+        inRange = goal >= min && goal <= max;
+        setpoint = inRange ? goal : 0;
 
         controller.setPIDF(kP, kI, kD, kF);
-        double error = commandedTarget - angle;
-        double output = controller.calculate(angle, commandedTarget);
-        if (Math.abs(error) > Math.toRadians(DEADBAND_DEG)) {
-            output += kS * Math.signum(error);
-        }
-        output += kTurnFF * -robotTurnRate;
+        double error = setpoint - angle;
+        double output = controller.calculate(angle, setpoint);
+        if (Math.abs(error) > Math.toRadians(DEADBAND_DEG)) output += kS * Math.signum(error);
         output = Range.clip(output, -MAX_POWER, MAX_POWER);
 
-        if (limp || (angle >= max && output > 0) || (angle <= min && output < 0)) {
-            output = 0;
-        }
+        if ((angle >= max && output > 0) || (angle <= min && output < 0)) output = 0;
         setPower(output);
     }
 
@@ -297,21 +209,43 @@ public class Turret extends SubsystemBase {
         servo.setPosition(0.5 + 0.5 * output);
     }
 
-    private boolean hasRecentVision(long now) {
-        return lastVisionLockNanos > 0 && (now - lastVisionLockNanos) * 1e-6 <= VISION_LOCK_VALID_MS;
+    public boolean isTooClose() {
+        return seen && visionDistance < MIN_SHOT_DIST;
     }
 
-    public AimMath.Status getStatus() {
-        long now = System.nanoTime();
-        boolean justFlipped = lastFlipNanos > 0 && (now - lastFlipNanos) * 1e-6 < HIVE_FLIP_COOLDOWN_MS;
-        boolean shooterReady = shooterEnabled && shooterTarget > 0
-                && Math.abs(getShooterVelocity() - shooterTarget) <= SHOOTER_TOLERANCE;
-        return AimMath.status(upCell != null, justFlipped, distance, MIN_SHOT_DIST, MAX_SHOT_DIST,
-                reachable, isSettled(), shooterReady, hasRecentVision(now), ALLOW_ODOMETRY_ONLY_SHOTS);
+    public boolean isSettled() {
+        return !encoderFault
+                && Math.abs(setpoint - angle) < Math.toRadians(AIM_TOLERANCE_DEG)
+                && Math.abs(velocity) < Math.toRadians(SETTLED_VEL_DEG_S);
+    }
+
+    public boolean isShooterReady() {
+        return shooterEnabled && shooterTarget > 0
+                && Math.abs(shooter.getVelocity() - shooterTarget) <= SHOOTER_TOLERANCE;
     }
 
     public boolean okToShoot() {
-        return autoAim && getStatus() == AimMath.Status.OK;
+        return cell != null && Double.isNaN(manualAngle) && inRange && isSettled()
+                && isShooterReady() && !isTooClose() && distance <= MAX_SHOT_DIST
+                && (seen || ALLOW_ODOMETRY_ONLY_SHOTS);
+    }
+
+    public void addTelemetry(TelemetryData telemetry) {
+        telemetry.addData("Turret OK to shoot", okToShoot());
+        telemetry.addData("Turret cell", cell == null ? "none" : cell);
+        telemetry.addData("Turret tags seen", seen);
+        telemetry.addData("Turret too close", isTooClose());
+        telemetry.addData("Turret in range", inRange);
+        telemetry.addData("Turret settled", isSettled());
+        telemetry.addData("Turret distance in", distance);
+        telemetry.addData("Turret odom deg", Math.toDegrees(odomAngle));
+        telemetry.addData("Turret bias deg", Math.toDegrees(bias));
+        telemetry.addData("Turret target deg", Math.toDegrees(target));
+        telemetry.addData("Turret angle deg", Math.toDegrees(angle));
+        telemetry.addData("Turret raw deg", rawDeg);
+        telemetry.addData("Turret encoder fault", encoderFault);
+        telemetry.addData("Shooter target", shooterTarget);
+        telemetry.addData("Shooter velocity", shooter.getVelocity());
     }
 
     static double rawToAngle(double rawDeg, double zeroRawDeg, double gearRatio, boolean reversed) {
@@ -319,107 +253,61 @@ public class Turret extends SubsystemBase {
         return Math.toRadians(reversed ? -turretDeg : turretDeg);
     }
 
-    static double reachableEquivalent(double target, double current, double min, double max) {
-        double best = Double.NaN;
-        double base = wrap(target);
-        for (int k = -1; k <= 1; k++) {
-            double candidate = base + k * 2 * Math.PI;
-            if (candidate < min || candidate > max) continue;
-            if (Double.isNaN(best) || Math.abs(candidate - current) < Math.abs(best - current)) {
-                best = candidate;
-            }
-        }
-        return best;
+    static double[] pivot(double x, double y, double heading, double pivotForward, double pivotLeft) {
+        double c = Math.cos(heading), s = Math.sin(heading);
+        return new double[]{x + pivotForward * c - pivotLeft * s, y + pivotForward * s + pivotLeft * c};
     }
 
-    static double nearestLimit(double target, double min, double max) {
-        return Math.abs(wrap(target - min)) <= Math.abs(wrap(target - max)) ? min : max;
+    static double odomAngle(double pivotX, double pivotY, double heading, double aimX, double aimY) {
+        return wrap(Math.atan2(aimY - pivotY, aimX - pivotX) - heading);
     }
 
-    static double wrap(double radians) {
-        return AimMath.wrap(radians);
+    static double visionAngle(double turretAtCapture, double bearing, double headingNow, double headingAtCapture) {
+        return wrap(turretAtCapture + bearing - wrap(headingNow - headingAtCapture));
+    }
+
+    public static double wrap(double radians) {
+        return Math.atan2(Math.sin(radians), Math.cos(radians));
     }
 
     public double getAngle() {
         return angle;
     }
 
+    public double getSetpoint() {
+        return setpoint;
+    }
+
     public double getVelocity() {
         return velocity;
-    }
-
-    public double getRequestedTarget() {
-        return requestedTarget;
-    }
-
-    public double getCommandedTarget() {
-        return commandedTarget;
-    }
-
-    public boolean isReachable() {
-        return reachable;
-    }
-
-    public boolean isEncoderFault() {
-        return encoderFault;
-    }
-
-    public boolean isSettled() {
-        return !encoderFault
-                && Math.abs(commandedTarget - angle) < Math.toRadians(AIM_TOLERANCE_DEG)
-                && Math.abs(velocity) < Math.toRadians(SETTLED_VEL_DEG_S);
-    }
-
-    public double getRawDeg() {
-        return rawDeg;
     }
 
     public double getPower() {
         return power;
     }
 
-    public double getRobotTurnRate() {
-        return robotTurnRate;
+    public double getRawDeg() {
+        return rawDeg;
     }
 
-    public Pose getBotPose() {
-        return botPose;
+    public boolean isEncoderFault() {
+        return encoderFault;
     }
 
-    public Field.Alliance getAlliance() {
-        return alliance;
+    public boolean isInRange() {
+        return inRange;
     }
 
-    public HiveCells.Cell getUpCell() {
-        return upCell;
-    }
-
-    public boolean isUpCellConfirmed() {
-        return upCellConfirmed;
-    }
-
-    public double getOdomAngle() {
-        return odomAngle;
-    }
-
-    public double getBias() {
-        return bias;
+    public boolean isSeen() {
+        return seen;
     }
 
     public double getDistance() {
         return distance;
     }
 
-    public VisionState getVisionState() {
-        return visionState;
-    }
-
-    public CellObservation getLastObservation() {
-        return lastObservation;
-    }
-
-    public double getShooterTarget() {
-        return shooterTarget;
+    public HiveCells.Cell getCell() {
+        return cell;
     }
 
     public double getShooterVelocity() {

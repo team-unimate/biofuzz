@@ -1,14 +1,12 @@
 package org.firstinspires.ftc.teamcode.subsystems.turret;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
 public class TurretTest {
     private static final double EPS = 1e-9;
-    private static final double MIN = Math.toRadians(-90);
-    private static final double MAX = Math.toRadians(90);
 
     @Test
     public void rawToAngleUsesGearRatioAndDirection() {
@@ -18,32 +16,22 @@ public class TurretTest {
     }
 
     @Test
-    public void targetInsideLimitsIsKept() {
-        assertEquals(Math.toRadians(45), Turret.reachableEquivalent(Math.toRadians(45), 0, MIN, MAX), EPS);
+    public void pivotIsOffsetInRobotFrame() {
+        assertArrayEquals(new double[]{10, 23}, Turret.pivot(10, 20, Math.toRadians(90), 3, 0), EPS);
+        assertArrayEquals(new double[]{8, 20}, Turret.pivot(10, 20, Math.toRadians(90), 0, 2), EPS);
     }
 
     @Test
-    public void wrappedTargetIsBroughtBackInsideLimits() {
-        assertEquals(Math.toRadians(10), Turret.reachableEquivalent(Math.toRadians(370), 0, MIN, MAX), EPS);
+    public void odomAngleIsRobotRelative() {
+        assertEquals(0, Turret.odomAngle(0, 0, Math.toRadians(90), 0, 50), EPS);
+        assertEquals(Math.toRadians(-90), Turret.odomAngle(0, 0, 0, 0, -50), EPS);
+        assertEquals(Math.toRadians(45), Turret.odomAngle(0, 0, 0, 10, 10), EPS);
     }
 
     @Test
-    public void targetBehindRobotIsUnreachable() {
-        assertTrue(Double.isNaN(Turret.reachableEquivalent(Math.toRadians(180), 0, MIN, MAX)));
-    }
-
-    @Test
-    public void closestEquivalentWinsWhenRangeIsWide() {
-        double min = Math.toRadians(-200), max = Math.toRadians(200);
-
-        assertEquals(Math.toRadians(190), Turret.reachableEquivalent(Math.toRadians(-170), Math.toRadians(150), min, max), 1e-6);
-    }
-
-    @Test
-    public void unreachableTargetClampsToNearestLimit() {
-        assertEquals(MAX, Turret.nearestLimit(Math.toRadians(120), MIN, MAX), EPS);
-        assertEquals(MIN, Turret.nearestLimit(Math.toRadians(-120), MIN, MAX), EPS);
-
-        assertEquals(Math.toRadians(60), Turret.nearestLimit(Math.toRadians(150), Math.toRadians(-30), Math.toRadians(60)), EPS);
+    public void visionAngleRemovesRobotTurnSinceCapture() {
+        assertEquals(Math.toRadians(15), Turret.visionAngle(Math.toRadians(10), Math.toRadians(5), 0, 0), EPS);
+        assertEquals(Math.toRadians(5), Turret.visionAngle(Math.toRadians(10), Math.toRadians(5),
+                Math.toRadians(30), Math.toRadians(20)), EPS);
     }
 }

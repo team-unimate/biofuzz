@@ -13,12 +13,10 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.util.TelemetryData;
 
 import org.firstinspires.ftc.teamcode.field.Field;
-import org.firstinspires.ftc.teamcode.field.HiveCells;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
 import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
 import org.firstinspires.ftc.teamcode.vision.CellLocator;
-import org.firstinspires.ftc.teamcode.vision.CellObservation;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
 @Config
@@ -35,7 +33,6 @@ public class TurretAimTeleOp extends CommandOpMode {
     private TelemetryData telemetryData;
 
     private Field.Alliance alliance = Field.Alliance.BLUE;
-    private HiveCells.Cell startCell = null;
 
     @Override
     public void initialize() {
@@ -52,22 +49,16 @@ public class TurretAimTeleOp extends CommandOpMode {
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         telemetryData = new TelemetryData(telemetry);
 
-        gamepadEx1.getGamepadButton(GamepadKeys.Button.DPAD_UP).whenPressed(() -> turret.setUpCell(farCell(alliance)));
-        gamepadEx1.getGamepadButton(GamepadKeys.Button.DPAD_DOWN).whenPressed(() -> turret.setUpCell(audienceCell(alliance)));
     }
 
     @Override
     public void initialize_loop() {
         if (gamepad1.x) alliance = Field.Alliance.BLUE;
         if (gamepad1.b) alliance = Field.Alliance.RED;
-        if (gamepad1.dpad_up) startCell = farCell(alliance);
-        if (gamepad1.dpad_down) startCell = audienceCell(alliance);
-        if (startCell != null && startCell.alliance != alliance) startCell = null;
 
         turret.readEncoder();
-        telemetryData.addData("Controls", "X = BLUE, B = RED, dpad up = FAR up, dpad down = AUDIENCE up");
+        telemetryData.addData("Controls", "X = BLUE, B = RED");
         telemetryData.addData("Alliance", alliance);
-        telemetryData.addData("Start up cell", startCell == null ? "not set" : startCell);
         telemetryData.addData("Turret deg", Math.toDegrees(turret.getAngle()));
         telemetryData.addData("Encoder fault", turret.isEncoderFault());
         telemetryData.update();
@@ -76,8 +67,6 @@ public class TurretAimTeleOp extends CommandOpMode {
     @Override
     public void preRun() {
         turret.setAlliance(alliance);
-        if (startCell != null) turret.setUpCell(startCell);
-        turret.setAutoAim(true);
     }
 
     @Override
@@ -94,34 +83,11 @@ public class TurretAimTeleOp extends CommandOpMode {
 
         super.run();
 
-        telemetryData.addData("Controls", "RT = spin shooter, dpad up/down = force FAR/AUDIENCE up");
-        telemetryData.addData("Status", turret.getStatus());
-        HiveCells.Cell cell = turret.getUpCell();
-        telemetryData.addData("Target cell", cell == null ? "none" : cell + (turret.isUpCellConfirmed() ? "" : " (guess)"));
-        telemetryData.addData("Distance in", turret.getDistance());
-        telemetryData.addData("Vision", turret.getVisionState());
-        CellObservation obs = turret.getLastObservation();
-        telemetryData.addData("Vision tags", obs == null ? 0 : obs.tagCount());
-
+        telemetryData.addData("Controls", "RT = spin shooter");
         StringBuilder ids = new StringBuilder();
         for (CellLocator.TagPoint tag : limelight.getTagPoints()) ids.append(tag.id).append(' ');
         telemetryData.addData("Seen tag IDs", ids.toString().trim());
-
-        telemetryData.addData("odomAngle", Math.toDegrees(turret.getOdomAngle()));
-        telemetryData.addData("bias", Math.toDegrees(turret.getBias()));
-        telemetryData.addData("turretTarget", Math.toDegrees(turret.getCommandedTarget()));
-        telemetryData.addData("turretAngle", Math.toDegrees(turret.getAngle()));
-        telemetryData.addData("Shooter target", turret.getShooterTarget());
-        telemetryData.addData("Shooter velocity", turret.getShooterVelocity());
-        telemetryData.addData("Encoder fault", turret.isEncoderFault());
+        turret.addTelemetry(telemetryData);
         telemetryData.update();
-    }
-
-    private static HiveCells.Cell farCell(Field.Alliance alliance) {
-        return alliance == Field.Alliance.RED ? HiveCells.Cell.RED_FAR : HiveCells.Cell.BLUE_FAR;
-    }
-
-    private static HiveCells.Cell audienceCell(Field.Alliance alliance) {
-        return alliance == Field.Alliance.RED ? HiveCells.Cell.RED_AUDIENCE : HiveCells.Cell.BLUE_AUDIENCE;
     }
 }

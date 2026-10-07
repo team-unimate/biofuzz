@@ -99,12 +99,10 @@ public class Limelight extends SubsystemBase {
             list.add(point);
         }
 
-        CellLocator.StateGates gates = new CellLocator.StateGates(STATE_MATCH_MAX_IN, STATE_TIE_MARGIN_IN,
-                Math.toRadians(STATE_YAW_MARGIN_DEG));
         observations.clear();
         for (Map.Entry<HiveCells.Cell, List<CellLocator.TagPoint>> entry : byCell.entrySet()) {
             observations.put(entry.getKey(), CellLocator.locate(entry.getKey(), entry.getValue(), atCapture,
-                    TurretConstants.TURRET_FWD, TurretConstants.TURRET_LEFT, gates));
+                    TurretConstants.TURRET_FWD, TurretConstants.TURRET_LEFT));
         }
         newFrame = true;
     }

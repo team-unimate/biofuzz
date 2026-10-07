@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.vision;
 
-import com.pedropathing.math.Pose;
-
 import org.firstinspires.ftc.teamcode.field.HiveCells;
 import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
 
@@ -38,20 +36,6 @@ public final class CellLocator {
             this.up = up;
             this.pitch = pitch;
             this.yaw = yaw;
-        }
-    }
-
-    public static class StateGates {
-        public final double matchMax;
-
-        public final double tieMargin;
-
-        public final double yawMargin;
-
-        public StateGates(double matchMax, double tieMargin, double yawMargin) {
-            this.matchMax = matchMax;
-            this.tieMargin = tieMargin;
-            this.yawMargin = yawMargin;
         }
     }
 
@@ -108,52 +92,15 @@ public final class CellLocator {
     }
 
     public static CellObservation locate(HiveCells.Cell cell, List<TagPoint> tags, TurretHistory.Sample at,
-                                         double pivotForward, double pivotLeft, StateGates gates) {
-        double turretToFieldYaw = at.heading + at.turretAngle;
+                                         double pivotForward, double pivotLeft) {
         double measuredYaw = measureRowYaw(tags);
-
-        double[] center;
-        HiveCells.State state;
-        if (!Double.isNaN(measuredYaw)) {
-            center = rowCenter(tags, measuredYaw);
-            double[] field = turretToField(center[0], center[1], at, pivotForward, pivotLeft);
-            HiveCells.State byPosition = closest(
-                    distance(field, cell.pose(HiveCells.State.UP)),
-                    distance(field, cell.pose(HiveCells.State.DOWN)),
-                    gates.matchMax, gates.tieMargin);
-            double fieldYaw = measuredYaw + turretToFieldYaw;
-            HiveCells.State byYaw = closest(
-                    Math.abs(wrap(fieldYaw - cell.pose(HiveCells.State.UP).heading())),
-                    Math.abs(wrap(fieldYaw - cell.pose(HiveCells.State.DOWN).heading())),
-                    Double.POSITIVE_INFINITY, gates.yawMargin);
-
-            state = byYaw == HiveCells.State.UNKNOWN || byYaw == byPosition ? byPosition : HiveCells.State.UNKNOWN;
-        } else {
-            double[] upCenter = rowCenter(tags, wrap(cell.pose(HiveCells.State.UP).heading() - turretToFieldYaw));
-            double[] downCenter = rowCenter(tags, wrap(cell.pose(HiveCells.State.DOWN).heading() - turretToFieldYaw));
-            state = closest(
-                    distance(turretToField(upCenter[0], upCenter[1], at, pivotForward, pivotLeft), cell.pose(HiveCells.State.UP)),
-                    distance(turretToField(downCenter[0], downCenter[1], at, pivotForward, pivotLeft), cell.pose(HiveCells.State.DOWN)),
-                    gates.matchMax, gates.tieMargin);
-
-            center = state == HiveCells.State.DOWN ? downCenter : upCenter;
-        }
-
+        double rowYaw = Double.isNaN(measuredYaw) ? wrap(cell.pose.heading() - at.heading - at.turretAngle) : measuredYaw;
+        double[] center = rowCenter(tags, rowYaw);
         double[] field = turretToField(center[0], center[1], at, pivotForward, pivotLeft);
         int[] ids = new int[tags.size()];
         for (int i = 0; i < ids.length; i++) ids[i] = tags.get(i).id;
-        return new CellObservation(cell, ids, center[0], center[1], measuredYaw, state,
+        return new CellObservation(cell, ids, center[0], center[1], measuredYaw,
                 field[0], field[1], at.nanos, at.turretAngle, at.heading);
-    }
-
-    static HiveCells.State closest(double upError, double downError, double max, double margin) {
-        if (Math.abs(upError - downError) <= margin) return HiveCells.State.UNKNOWN;
-        if (upError < downError) return upError <= max ? HiveCells.State.UP : HiveCells.State.UNKNOWN;
-        return downError <= max ? HiveCells.State.DOWN : HiveCells.State.UNKNOWN;
-    }
-
-    private static double distance(double[] field, Pose pose) {
-        return Math.hypot(field[0] - pose.x(), field[1] - pose.y());
     }
 
     static double wrap(double radians) {

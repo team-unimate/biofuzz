@@ -28,7 +28,6 @@ public class VisionTestTeleOp extends CommandOpMode {
     private TelemetryData telemetryData;
 
     private double targetDeg = 0;
-    private boolean limp = false;
 
     @Override
     public void initialize() {
@@ -48,10 +47,6 @@ public class VisionTestTeleOp extends CommandOpMode {
         gamepadEx1.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(() -> targetDeg += STEP_DEG);
         gamepadEx1.getGamepadButton(GamepadKeys.Button.DPAD_RIGHT).whenPressed(() -> targetDeg -= STEP_DEG);
         gamepadEx1.getGamepadButton(GamepadKeys.Button.A).whenPressed(() -> targetDeg = 0);
-        gamepadEx1.getGamepadButton(GamepadKeys.Button.X).whenPressed(() -> {
-            limp = !limp;
-            turret.setLimp(limp);
-        });
     }
 
     @Override
@@ -64,11 +59,11 @@ public class VisionTestTeleOp extends CommandOpMode {
         ));
         follower.update();
         turret.updateBotPose(follower.pose());
-        turret.setTargetAngle(Math.toRadians(targetDeg));
+        turret.setManualAngle(Math.toRadians(targetDeg));
 
         super.run();
 
-        telemetryData.addData("Controls", "dpad L/R = turret +-15 deg, A = 0, X = limp");
+        telemetryData.addData("Controls", "dpad L/R = turret +-15 deg, A = 0");
         telemetryData.addData("Limelight connected", limelight.isConnected());
         telemetryData.addData("Frame age ms", limelight.getFrameAgeMs());
         telemetryData.addData("Turret deg", Math.toDegrees(turret.getAngle()));
@@ -86,7 +81,6 @@ public class VisionTestTeleOp extends CommandOpMode {
             telemetryData.addData(obs.cell + " bearing deg", Math.toDegrees(obs.bearing));
             telemetryData.addData(obs.cell + " distance in", obs.distance);
             telemetryData.addData(obs.cell + " row yaw deg", Math.toDegrees(obs.rowYaw));
-            telemetryData.addData(obs.cell + " state", obs.state);
             telemetryData.addData(obs.cell + " field x/y", String.format("%.1f / %.1f", obs.fieldX, obs.fieldY));
         }
         telemetryData.update();
