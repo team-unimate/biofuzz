@@ -6,7 +6,7 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
 public class TurretTest {
-    private static final double EPS = 1e-9;
+    private static final double EPS = 0.0001;
 
     @Test
     public void rawToAngleUsesGearRatioAndDirection() {

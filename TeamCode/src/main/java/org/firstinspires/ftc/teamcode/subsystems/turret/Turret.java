@@ -39,7 +39,7 @@ public class Turret extends SubsystemBase {
     private double angle = 0;
     private double velocity = 0;
     private double power = 0;
-    private long previousNanos = -1;
+    private double previousTime = Double.NaN;
     private double previousAngle = 0;
 
     private double odomAngle = 0;
@@ -49,7 +49,7 @@ public class Turret extends SubsystemBase {
     private boolean inRange = true;
     private double distance = Double.NaN;
     private double visionDistance = Double.NaN;
-    private long lastSeenNanos = -1;
+    private double lastSeenTime = Double.NaN;
     private boolean seen = false;
 
     private boolean shooterEnabled = false;
@@ -81,7 +81,7 @@ public class Turret extends SubsystemBase {
     public void setAlliance(Field.Alliance alliance) {
         if (alliance != this.alliance) {
             bias = 0;
-            lastSeenNanos = -1;
+            lastSeenTime = Double.NaN;
         }
         this.alliance = alliance;
     }
@@ -112,19 +112,19 @@ public class Turret extends SubsystemBase {
 
     @Override
     public void periodic() {
-        long now = System.nanoTime();
+        double now = history.now();
         updateAim(now);
         updateTurret(now);
         updateShooter();
     }
 
-    private void updateAim(long now) {
-        double dt = previousNanos > 0 ? (now - previousNanos) * 1e-9 : 0;
+    private void updateAim(double now) {
+        double dt = Double.isNaN(previousTime) ? 0 : now - previousTime;
         HiveCells.Cell nextCell = alliance == null ? null : HiveCells.forRobot(alliance, botPose);
         if (nextCell != cell) {
             cell = nextCell;
             bias = 0;
-            lastSeenNanos = -1;
+            lastSeenTime = Double.NaN;
         }
         if (cell == null) {
             target = 0;
@@ -144,31 +144,31 @@ public class Turret extends SubsystemBase {
             if (Math.abs(error) <= Math.toRadians(VISION_MAX_DISAGREE_DEG)) {
                 bias = error;
                 visionDistance = obs.distance;
-                lastSeenNanos = now;
+                lastSeenTime = now;
             }
         }
 
-        seen = lastSeenNanos > 0 && (now - lastSeenNanos) * 1e-6 <= VISION_LOCK_VALID_MS;
+        seen = !Double.isNaN(lastSeenTime) && (now - lastSeenTime) * 1000 <= VISION_LOCK_VALID_MS;
         if (!seen) bias *= Math.exp(-BIAS_DECAY_PER_S * dt);
         target = wrap(odomAngle + bias);
         distance = seen ? visionDistance : odomDistance;
     }
 
-    private void updateTurret(long now) {
+    private void updateTurret(double now) {
         servo.setDirection(SERVO_REVERSED ? Servo.Direction.REVERSE : Servo.Direction.FORWARD);
 
         readEncoder();
         if (encoderFault) {
             setPower(0);
-            previousNanos = -1;
+            previousTime = Double.NaN;
             return;
         }
 
-        if (previousNanos > 0) {
-            double dt = (now - previousNanos) * 1e-9;
-            if (dt > 1e-4) velocity += VELOCITY_FILTER_ALPHA * ((angle - previousAngle) / dt - velocity);
+        if (!Double.isNaN(previousTime)) {
+            double dt = now - previousTime;
+            if (dt > 0) velocity += VELOCITY_FILTER_ALPHA * ((angle - previousAngle) / dt - velocity);
         }
-        previousNanos = now;
+        previousTime = now;
         previousAngle = angle;
         history.add(now, angle, botPose.x(), botPose.y(), botPose.heading());
 

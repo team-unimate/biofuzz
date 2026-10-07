@@ -73,7 +73,7 @@ public class Limelight extends SubsystemBase {
             clearObservations();
             return;
         }
-        TurretHistory.Sample atCapture = history.at(System.nanoTime() - (long) (frameAgeMs * 1e6));
+        TurretHistory.Sample atCapture = history.at(history.now() - frameAgeMs / 1000);
         if (atCapture == null) {
             clearObservations();
             return;
