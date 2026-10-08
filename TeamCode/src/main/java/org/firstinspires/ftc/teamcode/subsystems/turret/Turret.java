@@ -62,7 +62,6 @@ public class Turret extends SubsystemBase {
 
     private boolean shooterEnabled = false;
     private double shooterTarget = 0;
-    private double shooterOverride = Double.NaN;
 
     public Turret(HardwareMap hardwareMap, TurretHistory history) {
         this(hardwareMap, null, history);
@@ -117,10 +116,6 @@ public class Turret extends SubsystemBase {
 
     public void setShooterEnabled(boolean enabled) {
         shooterEnabled = enabled;
-    }
-
-    public void setShooterOverride(double ticksPerSecond) {
-        shooterOverride = ticksPerSecond;
     }
 
     public void readEncoder() {
@@ -217,9 +212,7 @@ public class Turret extends SubsystemBase {
 
     private void updateShooter() {
         shooter.setDirection(SHOOTER_REVERSED ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD);
-        if (!Double.isNaN(shooterOverride)) {
-            shooterTarget = shooterOverride;
-        } else if (TUNING_SHOOTER) {
+        if (TUNING_SHOOTER) {
             shooterTarget = TUNING_VELOCITY;
         } else {
             shooterTarget = Double.isNaN(distance) ? 0 : shooterTable.get(distance);

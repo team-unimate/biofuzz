@@ -59,4 +59,8 @@ public class TurretConstants {
     public static double SHOOTER_TOLERANCE = 40;
     public static boolean TUNING_SHOOTER = false;
     public static double TUNING_VELOCITY = 1200;
+
+    public static boolean USE_MANUAL_ANGLE = false;
+    public static double MANUAL_ANGLE_DEG = 0;
+    public static boolean SHOW_TAGS = false;
 }

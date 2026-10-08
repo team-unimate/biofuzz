@@ -25,14 +25,12 @@ public class ShotTableTest {
     }
 
     @Test
-    public void removeLastUndoesMostRecentRecord() {
+    public void clearRemovesEveryRecord() {
         ShotTable table = new ShotTable(3);
         table.record(96, 1600);
         table.record(24, 1000);
-        table.removeLast();
-        assertEquals("SHOOTER_DIST_IN = {96.0};", table.distanceLine());
-        table.removeLast();
-        table.removeLast();
+        table.clear();
+        assertEquals(0, table.size());
         assertEquals("SHOOTER_DIST_IN = {};", table.distanceLine());
     }
 
