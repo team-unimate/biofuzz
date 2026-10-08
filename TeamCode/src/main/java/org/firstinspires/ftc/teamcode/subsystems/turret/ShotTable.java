@@ -30,8 +30,8 @@ public class ShotTable {
         recorded.add(new Shot(distance, velocity));
     }
 
-    public void removeLast() {
-        if (!recorded.isEmpty()) recorded.remove(recorded.size() - 1);
+    public void clear() {
+        recorded.clear();
     }
 
     public List<Shot> sorted() {
