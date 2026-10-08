@@ -38,6 +38,12 @@ public class TurretConstants {
     public static double AIM_TOLERANCE_DEG = 2;
     public static double SETTLED_VEL_DEG_S = 15;
 
+    public static double TRANSFER_DELAY_S = 0.15;
+    public static double[] TOF_DIST_IN = {24, 48, 72, 96, 120};
+    public static double[] TOF_S = {0.25, 0.35, 0.45, 0.55, 0.65};
+    public static double MAX_SHOOT_SPEED_IN_S = 30;
+    public static double SHOOT_DRIVE_SCALE = 0.4;
+
     public static double VISION_MAX_DISAGREE_DEG = 10;
     public static double BIAS_DECAY_PER_S = 0.5;
     public static double VISION_LOCK_VALID_MS = 500;

@@ -21,6 +21,8 @@ import org.firstinspires.ftc.teamcode.field.HiveCells;
 import org.firstinspires.ftc.teamcode.vision.CellObservation;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
+import java.util.function.DoubleUnaryOperator;
+
 public class Turret extends SubsystemBase {
     private final TauraServo servo;
     private final DcMotorEx shooter;
@@ -28,8 +30,12 @@ public class Turret extends SubsystemBase {
     private final TurretHistory history;
     private final PIDFController controller = new PIDFController(kP, kI, kD, kF);
     private final InterpLUT shooterTable = new InterpLUT();
+    private final InterpLUT timeOfFlightTable = new InterpLUT();
 
     private Pose botPose = new Pose(0, 0, 0);
+    private double previousPoseTime = Double.NaN;
+    private double velX = 0;
+    private double velY = 0;
     private Field.Alliance alliance = null;
     private HiveCells.Cell cell = null;
 
@@ -44,6 +50,8 @@ public class Turret extends SubsystemBase {
 
     private double odomAngle = 0;
     private double bias = 0;
+    private double leadTime = 0;
+    private double leadAngle = 0;
     private double target = 0;
     private double setpoint = 0;
     private boolean inRange = true;
@@ -72,9 +80,22 @@ public class Turret extends SubsystemBase {
             shooterTable.add(SHOOTER_DIST_IN[i], SHOOTER_VEL[i]);
         }
         shooterTable.createLUT();
+        for (int i = 0; i < Math.min(TOF_DIST_IN.length, TOF_S.length); i++) {
+            timeOfFlightTable.add(TOF_DIST_IN[i], TOF_S[i]);
+        }
+        timeOfFlightTable.createLUT();
     }
 
     public void updateBotPose(Pose pose) {
+        double now = history.now();
+        if (!Double.isNaN(previousPoseTime)) {
+            double dt = now - previousPoseTime;
+            if (dt > 0) {
+                velX += VELOCITY_FILTER_ALPHA * ((pose.x() - botPose.x()) / dt - velX);
+                velY += VELOCITY_FILTER_ALPHA * ((pose.y() - botPose.y()) / dt - velY);
+            }
+        }
+        previousPoseTime = now;
         botPose = pose;
     }
 
@@ -136,6 +157,11 @@ public class Turret extends SubsystemBase {
         double[] pivot = pivot(botPose.x(), botPose.y(), botPose.heading(), TURRET_FWD, TURRET_LEFT);
         odomAngle = odomAngle(pivot[0], pivot[1], botPose.heading(), cell.pose.x(), cell.pose.y());
         double odomDistance = Math.hypot(cell.pose.x() - pivot[0], cell.pose.y() - pivot[1]);
+        double[] virtual = virtualPose(pivot[0], pivot[1], velX, velY, cell.pose.x(), cell.pose.y(),
+                TRANSFER_DELAY_S, this::timeOfFlight);
+        leadTime = virtual[2];
+        leadAngle = wrap(odomAngle(virtual[0], virtual[1], botPose.heading(), cell.pose.x(), cell.pose.y()) - odomAngle);
+        double virtualOdomDistance = Math.hypot(cell.pose.x() - virtual[0], cell.pose.y() - virtual[1]);
 
         CellObservation obs = vision != null && vision.hasNewFrame() ? vision.getObservation(cell) : null;
         if (obs != null) {
@@ -150,8 +176,9 @@ public class Turret extends SubsystemBase {
 
         seen = !Double.isNaN(lastSeenTime) && (now - lastSeenTime) * 1000 <= VISION_LOCK_VALID_MS;
         if (!seen) bias *= Math.exp(-BIAS_DECAY_PER_S * dt);
-        target = wrap(odomAngle + bias);
-        distance = seen ? visionDistance : odomDistance;
+        target = wrap(odomAngle + bias + leadAngle);
+        double realDistance = seen ? visionDistance : odomDistance;
+        distance = realDistance + (virtualOdomDistance - odomDistance);
     }
 
     private void updateTurret(double now) {
@@ -204,13 +231,29 @@ public class Turret extends SubsystemBase {
         }
     }
 
+    private double timeOfFlight(double distance) {
+        return timeOfFlightTable.get(Range.clip(distance, TOF_DIST_IN[0], TOF_DIST_IN[TOF_DIST_IN.length - 1]));
+    }
+
     private void setPower(double output) {
         power = output;
         servo.setPosition(0.5 + 0.5 * output);
     }
 
     public boolean isTooClose() {
-        return seen && visionDistance < MIN_SHOT_DIST;
+        return distance < MIN_SHOT_DIST;
+    }
+
+    public boolean isTooFar() {
+        return distance > MAX_SHOT_DIST;
+    }
+
+    public boolean isTooFast() {
+        return getRobotSpeed() > MAX_SHOOT_SPEED_IN_S;
+    }
+
+    public double getRobotSpeed() {
+        return Math.hypot(velX, velY);
     }
 
     public boolean isSettled() {
@@ -226,7 +269,7 @@ public class Turret extends SubsystemBase {
 
     public boolean okToShoot() {
         return cell != null && Double.isNaN(manualAngle) && inRange && isSettled()
-                && isShooterReady() && !isTooClose() && distance <= MAX_SHOT_DIST
+                && isShooterReady() && !isTooClose() && !isTooFar() && !isTooFast()
                 && (seen || ALLOW_ODOMETRY_ONLY_SHOTS);
     }
 
@@ -237,7 +280,12 @@ public class Turret extends SubsystemBase {
         telemetry.addData("Turret too close", isTooClose());
         telemetry.addData("Turret in range", inRange);
         telemetry.addData("Turret settled", isSettled());
-        telemetry.addData("Turret distance in", distance);
+        telemetry.addData("Turret too far", isTooFar());
+        telemetry.addData("Turret too fast", isTooFast());
+        telemetry.addData("Robot speed in/s", getRobotSpeed());
+        telemetry.addData("Lead time s", leadTime);
+        telemetry.addData("Virtual distance in", distance);
+        telemetry.addData("Lead angle deg", Math.toDegrees(leadAngle));
         telemetry.addData("Turret odom deg", Math.toDegrees(odomAngle));
         telemetry.addData("Turret bias deg", Math.toDegrees(bias));
         telemetry.addData("Turret target deg", Math.toDegrees(target));
@@ -256,6 +304,18 @@ public class Turret extends SubsystemBase {
     static double[] pivot(double x, double y, double heading, double pivotForward, double pivotLeft) {
         double c = Math.cos(heading), s = Math.sin(heading);
         return new double[]{x + pivotForward * c - pivotLeft * s, y + pivotForward * s + pivotLeft * c};
+    }
+
+    static double[] virtualPose(double x, double y, double velX, double velY, double aimX, double aimY,
+                                double transferDelay, DoubleUnaryOperator timeOfFlight) {
+        double t = transferDelay + timeOfFlight.applyAsDouble(Math.hypot(aimX - x, aimY - y));
+        double virtualX = x, virtualY = y;
+        for (int i = 0; i < 3; i++) {
+            virtualX = x + velX * t;
+            virtualY = y + velY * t;
+            t = transferDelay + timeOfFlight.applyAsDouble(Math.hypot(aimX - virtualX, aimY - virtualY));
+        }
+        return new double[]{virtualX, virtualY, t};
     }
 
     static double odomAngle(double pivotX, double pivotY, double heading, double aimX, double aimY) {
