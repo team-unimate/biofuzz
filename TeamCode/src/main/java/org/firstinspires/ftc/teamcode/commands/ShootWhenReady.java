@@ -3,14 +3,14 @@ package org.firstinspires.ftc.teamcode.commands;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
+import java.util.function.BooleanSupplier;
 
 public class ShootWhenReady extends SequentialCommandGroup {
     public static long TIMEOUT_MS = 1500;
 
-    public ShootWhenReady(Turret turret) {
+    public ShootWhenReady(BooleanSupplier okToShoot) {
         addCommands(
-                new WaitUntilCommand(turret::okToShoot).withTimeout(TIMEOUT_MS),
+                new WaitUntilCommand(okToShoot).withTimeout(TIMEOUT_MS),
                 new TransferSequence()
         );
     }

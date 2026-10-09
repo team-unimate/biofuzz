@@ -294,12 +294,12 @@ public class Turret extends SubsystemBase {
         return Math.toRadians(reversed ? -turretDeg : turretDeg);
     }
 
-    static double[] pivot(double x, double y, double heading, double pivotForward, double pivotLeft) {
+    public static double[] pivot(double x, double y, double heading, double pivotForward, double pivotLeft) {
         double c = Math.cos(heading), s = Math.sin(heading);
         return new double[]{x + pivotForward * c - pivotLeft * s, y + pivotForward * s + pivotLeft * c};
     }
 
-    static double[] virtualPose(double x, double y, double velX, double velY, double aimX, double aimY,
+    public static double[] virtualPose(double x, double y, double velX, double velY, double aimX, double aimY,
                                 double transferDelay, DoubleUnaryOperator timeOfFlight) {
         double t = transferDelay + timeOfFlight.applyAsDouble(Math.hypot(aimX - x, aimY - y));
         double virtualX = x, virtualY = y;
@@ -311,11 +311,11 @@ public class Turret extends SubsystemBase {
         return new double[]{virtualX, virtualY, t};
     }
 
-    static double odomAngle(double pivotX, double pivotY, double heading, double aimX, double aimY) {
+    public static double odomAngle(double pivotX, double pivotY, double heading, double aimX, double aimY) {
         return wrap(Math.atan2(aimY - pivotY, aimX - pivotX) - heading);
     }
 
-    static double visionAngle(double turretAtCapture, double bearing, double headingNow, double headingAtCapture) {
+    public static double visionAngle(double turretAtCapture, double bearing, double headingNow, double headingAtCapture) {
         return wrap(turretAtCapture + bearing - wrap(headingNow - headingAtCapture));
     }
 

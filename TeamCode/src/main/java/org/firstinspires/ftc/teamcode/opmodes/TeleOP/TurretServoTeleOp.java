@@ -13,25 +13,23 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.util.TelemetryData;
 
 import org.firstinspires.ftc.teamcode.commands.ShootWhenReady;
-import org.firstinspires.ftc.teamcode.commands.turret.SetTurretSide;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretConstants;
 import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretservo.TurretServo;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
 import org.firstinspires.ftc.teamcode.vision.CellLocator;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
 @Config
-@TeleOp(name = "Turret TeleOp")
-public class TurretTeleOp extends CommandOpMode {
+@TeleOp(name = "Turret Servo TeleOp")
+public class TurretServoTeleOp extends CommandOpMode {
     public static double START_X_IN = 72;
     public static double START_Y_IN = 72;
     public static double START_HEADING_DEG = 90;
 
     private Follower follower;
-    private Turret turret;
+    private TurretServo turret;
     private Limelight limelight;
     private GamepadEx driver;
     private GamepadEx operator;
@@ -48,7 +46,7 @@ public class TurretTeleOp extends CommandOpMode {
         follower = Constants.createFollower(hardwareMap);
         TurretHistory history = new TurretHistory();
         limelight = new Limelight(hardwareMap, history);
-        turret = new Turret(hardwareMap, limelight, history);
+        turret = new TurretServo(hardwareMap, limelight, history);
         register(limelight, turret);
 
         driver = new GamepadEx(gamepad1);
@@ -72,12 +70,9 @@ public class TurretTeleOp extends CommandOpMode {
         if (gamepad1.b) alliance = Field.Alliance.RED;
         if (gamepad1.y) useSavedPose = false;
 
-        turret.readEncoder();
         telemetryData.addData("Controls", "X = BLUE, B = RED, Y = ignore saved pose");
         telemetryData.addData("Alliance", alliance);
         telemetryData.addData("Start pose", useSavedPose ? "saved " + PosePersistency.getPose(null) : "dashboard START_*");
-        telemetryData.addData("Turret deg", Math.toDegrees(turret.getAngle()));
-        telemetryData.addData("Encoder fault", turret.isEncoderFault());
         telemetryData.update();
     }
 
@@ -85,16 +80,16 @@ public class TurretTeleOp extends CommandOpMode {
     public void preRun() {
         Pose start = new Pose(START_X_IN, START_Y_IN, Math.toRadians(START_HEADING_DEG));
         follower.setPose(useSavedPose ? PosePersistency.getPose(start) : start);
-        schedule(new SetTurretSide(turret, alliance));
+        turret.setAlliance(alliance);
+        PosePersistency.saveAlliance(alliance);
     }
 
     @Override
     public void run() {
-        double driveScale = gamepad2.a ? TurretConstants.SHOOT_DRIVE_SCALE : 1;
         follower.manual(ManualDrive.fieldCentric(
-                gamepad1.left_stick_y * driveScale,
-                gamepad1.left_stick_x * driveScale,
-                -gamepad1.right_stick_x * driveScale,
+                gamepad1.left_stick_y,
+                gamepad1.left_stick_x,
+                -gamepad1.right_stick_x,
                 follower.pose().heading()
         ));
         follower.update();
@@ -105,7 +100,6 @@ public class TurretTeleOp extends CommandOpMode {
         PosePersistency.savePose(follower.pose());
 
         telemetryData.addData("Shooter", shooterOn ? "on" : "off");
-        telemetryData.addData("Drive scale", driveScale);
         StringBuilder ids = new StringBuilder();
         for (CellLocator.TagPoint tag : limelight.getTagPoints()) ids.append(tag.id).append(' ');
         telemetryData.addData("Seen tag IDs", ids.toString().trim());
