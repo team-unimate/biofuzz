@@ -1,32 +1,32 @@
-package org.firstinspires.ftc.teamcode.subsystems.turret;
+package org.firstinspires.ftc.teamcode.subsystems.turretservo;
 
 import static org.firstinspires.ftc.teamcode.subsystems.turret.TurretConstants.*;
+import static org.firstinspires.ftc.teamcode.subsystems.turretservo.TurretServoConstants.*;
 
 import com.pedropathing.math.Pose;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.PwmControl;
+import com.qualcomm.robotcore.hardware.ServoImplEx;
 import com.qualcomm.robotcore.util.Range;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
-import com.seattlesolvers.solverslib.controller.PIDFController;
 import com.seattlesolvers.solverslib.util.InterpLUT;
 import com.seattlesolvers.solverslib.util.TelemetryData;
 
-import org.firstinspires.ftc.teamcode.TauraServo;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.HiveCells;
+import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
+import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
 import org.firstinspires.ftc.teamcode.vision.CellObservation;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
-public class Turret extends SubsystemBase {
-    private final TauraServo servo;
+public class TurretServo extends SubsystemBase {
+    private final ServoImplEx servo;
     private final DcMotorEx shooter;
     private final Limelight vision;
     private final TurretHistory history;
-    private final PIDFController controller = new PIDFController(kP, kI, kD, kF);
     private final InterpLUT shooterTable = new InterpLUT();
 
     private Pose botPose = new Pose(0, 0, 0);
@@ -34,13 +34,9 @@ public class Turret extends SubsystemBase {
     private HiveCells.Cell cell = null;
 
     private double manualAngle = Double.NaN;
-    private double rawDeg = 0;
-    private boolean encoderFault = false;
     private double angle = 0;
-    private double velocity = 0;
-    private double power = 0;
+    private double position = Double.NaN;
     private double previousTime = Double.NaN;
-    private double previousAngle = 0;
 
     private double odomAngle = 0;
     private double bias = 0;
@@ -55,15 +51,15 @@ public class Turret extends SubsystemBase {
     private boolean shooterEnabled = false;
     private double shooterTarget = 0;
 
-    public Turret(HardwareMap hardwareMap, TurretHistory history) {
+    public TurretServo(HardwareMap hardwareMap, TurretHistory history) {
         this(hardwareMap, null, history);
     }
 
-    public Turret(HardwareMap hardwareMap, Limelight vision, TurretHistory history) {
+    public TurretServo(HardwareMap hardwareMap, Limelight vision, TurretHistory history) {
         this.vision = vision;
         this.history = history;
-        servo = new TauraServo(hardwareMap.get(Servo.class, SERVO_NAME));
-        servo.setAnalogFeedbackSensor(hardwareMap.get(AnalogInput.class, ENCODER_NAME));
+        servo = hardwareMap.get(ServoImplEx.class, TurretServoConstants.SERVO_NAME);
+        servo.setPwmRange(new PwmControl.PwmRange(PWM_LOWER_US, PWM_UPPER_US));
         shooter = hardwareMap.get(DcMotorEx.class, SHOOTER_NAME);
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -97,14 +93,6 @@ public class Turret extends SubsystemBase {
         shooterEnabled = enabled;
     }
 
-    public void readEncoder() {
-        rawDeg = servo.getRawPositionInDegrees();
-        encoderFault = Double.isNaN(rawDeg) || Math.abs(rawDeg - ZERO_RAW_DEG) > RAW_SANITY_MARGIN_DEG;
-        if (!encoderFault) {
-            angle = rawToAngle(rawDeg, ZERO_RAW_DEG, GEAR_RATIO, ENCODER_REVERSED);
-        }
-    }
-
     @Override
     public void periodic() {
         double now = history.now();
@@ -128,14 +116,14 @@ public class Turret extends SubsystemBase {
             return;
         }
 
-        double[] pivot = pivot(botPose.x(), botPose.y(), botPose.heading(), TURRET_FWD, TURRET_LEFT);
-        odomAngle = odomAngle(pivot[0], pivot[1], botPose.heading(), cell.pose.x(), cell.pose.y());
+        double[] pivot = Turret.pivot(botPose.x(), botPose.y(), botPose.heading(), TURRET_FWD, TURRET_LEFT);
+        odomAngle = Turret.odomAngle(pivot[0], pivot[1], botPose.heading(), cell.pose.x(), cell.pose.y());
         double odomDistance = Math.hypot(cell.pose.x() - pivot[0], cell.pose.y() - pivot[1]);
 
         CellObservation obs = vision != null && vision.hasNewFrame() ? vision.getObservation(cell) : null;
         if (obs != null) {
-            double visionAngle = visionAngle(obs.turretAngleAtCapture, obs.bearing, botPose.heading(), obs.headingAtCapture);
-            double error = wrap(visionAngle - odomAngle);
+            double visionAngle = Turret.visionAngle(obs.turretAngleAtCapture, obs.bearing, botPose.heading(), obs.headingAtCapture);
+            double error = Turret.wrap(visionAngle - odomAngle);
             if (Math.abs(error) <= Math.toRadians(VISION_MAX_DISAGREE_DEG)) {
                 bias = error;
                 visionDistance = obs.distance;
@@ -145,27 +133,13 @@ public class Turret extends SubsystemBase {
 
         seen = !Double.isNaN(lastSeenTime) && (now - lastSeenTime) * 1000 <= VISION_LOCK_VALID_MS;
         if (!seen) bias *= Math.exp(-BIAS_DECAY_PER_S * dt);
-        target = wrap(odomAngle + bias);
+        target = Turret.wrap(odomAngle + bias);
         distance = seen ? visionDistance : odomDistance;
     }
 
     private void updateTurret(double now) {
-        servo.setDirection(SERVO_REVERSED ? Servo.Direction.REVERSE : Servo.Direction.FORWARD);
-
-        readEncoder();
-        if (encoderFault) {
-            setPower(0);
-            previousTime = Double.NaN;
-            return;
-        }
-
-        if (!Double.isNaN(previousTime)) {
-            double dt = now - previousTime;
-            if (dt > 0) velocity += VELOCITY_FILTER_ALPHA * ((angle - previousAngle) / dt - velocity);
-        }
+        double dt = Double.isNaN(previousTime) ? 0 : now - previousTime;
         previousTime = now;
-        previousAngle = angle;
-        history.add(now, angle, botPose.x(), botPose.y(), botPose.heading());
 
         double min = Math.toRadians(MIN_ANGLE_DEG);
         double max = Math.toRadians(MAX_ANGLE_DEG);
@@ -173,14 +147,11 @@ public class Turret extends SubsystemBase {
         inRange = goal >= min && goal <= max;
         setpoint = inRange ? goal : 0;
 
-        controller.setPIDF(kP, kI, kD, kF);
-        double error = setpoint - angle;
-        double output = controller.calculate(angle, setpoint);
-        if (Math.abs(error) > Math.toRadians(DEADBAND_DEG)) output += kS * Math.signum(error);
-        output = Range.clip(output, -MAX_POWER, MAX_POWER);
+        position = angleToPosition(setpoint, CENTER_POSITION, GEAR_RATIO, SERVO_RANGE_DEG, TurretServoConstants.SERVO_REVERSED);
+        servo.setPosition(position);
 
-        if ((angle >= max && output > 0) || (angle <= min && output < 0)) output = 0;
-        setPower(output);
+        angle = estimateAngle(angle, setpoint, Math.toRadians(TURRET_SPEED_DEG_S) * dt);
+        history.add(now, angle, botPose.x(), botPose.y(), botPose.heading());
     }
 
     private void updateShooter() {
@@ -197,19 +168,12 @@ public class Turret extends SubsystemBase {
         }
     }
 
-    private void setPower(double output) {
-        power = output;
-        servo.setPosition(0.5 + 0.5 * output);
-    }
-
     public boolean isTooClose() {
         return seen && visionDistance < MIN_SHOT_DIST;
     }
 
     public boolean isSettled() {
-        return !encoderFault
-                && Math.abs(setpoint - angle) < Math.toRadians(AIM_TOLERANCE_DEG)
-                && Math.abs(velocity) < Math.toRadians(SETTLED_VEL_DEG_S);
+        return Math.abs(setpoint - angle) < Math.toRadians(AIM_TOLERANCE_DEG);
     }
 
     public boolean isShooterReady() {
@@ -234,65 +198,28 @@ public class Turret extends SubsystemBase {
         telemetry.addData("Turret odom deg", Math.toDegrees(odomAngle));
         telemetry.addData("Turret bias deg", Math.toDegrees(bias));
         telemetry.addData("Turret target deg", Math.toDegrees(target));
-        telemetry.addData("Turret angle deg", Math.toDegrees(angle));
-        telemetry.addData("Turret raw deg", rawDeg);
-        telemetry.addData("Turret encoder fault", encoderFault);
+        telemetry.addData("Turret setpoint deg", Math.toDegrees(setpoint));
+        telemetry.addData("Turret estimated deg", Math.toDegrees(angle));
+        telemetry.addData("Turret servo position", position);
         telemetry.addData("Shooter target", shooterTarget);
         telemetry.addData("Shooter velocity", shooter.getVelocity());
     }
 
-    static double rawToAngle(double rawDeg, double zeroRawDeg, double gearRatio, boolean reversed) {
-        double turretDeg = (rawDeg - zeroRawDeg) / gearRatio;
-        return Math.toRadians(reversed ? -turretDeg : turretDeg);
+    static double angleToPosition(double radians, double centerPosition, double gearRatio, double servoRangeDeg, boolean reversed) {
+        double servoDeg = Math.toDegrees(radians) * gearRatio;
+        return Range.clip(centerPosition + (reversed ? -servoDeg : servoDeg) / servoRangeDeg, 0, 1);
     }
 
-    public static double[] pivot(double x, double y, double heading, double pivotForward, double pivotLeft) {
-        double c = Math.cos(heading), s = Math.sin(heading);
-        return new double[]{x + pivotForward * c - pivotLeft * s, y + pivotForward * s + pivotLeft * c};
-    }
-
-    public static double odomAngle(double pivotX, double pivotY, double heading, double aimX, double aimY) {
-        return wrap(Math.atan2(aimY - pivotY, aimX - pivotX) - heading);
-    }
-
-    public static double visionAngle(double turretAtCapture, double bearing, double headingNow, double headingAtCapture) {
-        return wrap(turretAtCapture + bearing - wrap(headingNow - headingAtCapture));
-    }
-
-    public static double wrap(double radians) {
-        return Math.atan2(Math.sin(radians), Math.cos(radians));
+    static double estimateAngle(double angle, double setpoint, double maxStep) {
+        return angle + Range.clip(setpoint - angle, -maxStep, maxStep);
     }
 
     public double getAngle() {
         return angle;
     }
 
-    public double getSetpoint() {
-        return setpoint;
-    }
-
-    public double getVelocity() {
-        return velocity;
-    }
-
-    public double getPower() {
-        return power;
-    }
-
-    public double getRawDeg() {
-        return rawDeg;
-    }
-
-    public boolean isEncoderFault() {
-        return encoderFault;
-    }
-
-    public boolean isInRange() {
-        return inRange;
-    }
-
-    public boolean isSeen() {
-        return seen;
+    public double getPosition() {
+        return position;
     }
 
     public double getDistance() {
@@ -301,9 +228,5 @@ public class Turret extends SubsystemBase {
 
     public HiveCells.Cell getCell() {
         return cell;
-    }
-
-    public double getShooterVelocity() {
-        return shooter.getVelocity();
     }
 }
