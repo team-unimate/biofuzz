@@ -15,6 +15,7 @@ import com.seattlesolvers.solverslib.util.TelemetryData;
 import org.firstinspires.ftc.teamcode.commands.ShootWhenReady;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.turret.TurretConstants;
 import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
 import org.firstinspires.ftc.teamcode.subsystems.turretservo.TurretServo;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
@@ -86,10 +87,11 @@ public class TurretServoTeleOp extends CommandOpMode {
 
     @Override
     public void run() {
+        double driveScale = gamepad2.a ? TurretConstants.SHOOT_DRIVE_SCALE : 1;
         follower.manual(ManualDrive.fieldCentric(
-                gamepad1.left_stick_y,
-                gamepad1.left_stick_x,
-                -gamepad1.right_stick_x,
+                gamepad1.left_stick_y * driveScale,
+                gamepad1.left_stick_x * driveScale,
+                -gamepad1.right_stick_x * driveScale,
                 follower.pose().heading()
         ));
         follower.update();
@@ -100,6 +102,7 @@ public class TurretServoTeleOp extends CommandOpMode {
         PosePersistency.savePose(follower.pose());
 
         telemetryData.addData("Shooter", shooterOn ? "on" : "off");
+        telemetryData.addData("Drive scale", driveScale);
         StringBuilder ids = new StringBuilder();
         for (CellLocator.TagPoint tag : limelight.getTagPoints()) ids.append(tag.id).append(' ');
         telemetryData.addData("Seen tag IDs", ids.toString().trim());
