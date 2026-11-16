@@ -2,9 +2,11 @@ package org.firstinspires.ftc.teamcode.vision;
 
 import com.acmerobotics.dashboard.config.Config;
 
+import org.firstinspires.ftc.teamcode.subsystems.vision.VisionConstants;
+
 @Config
 public class LimelightConstants {
-    public static String DEVICE_NAME = "limelight";
+    public static String DEVICE_NAME = VisionConstants.LIMELIGHT_HARDWARE_NAME;
 
     public static int APRILTAG_PIPELINE_INDEX = 0;
 
