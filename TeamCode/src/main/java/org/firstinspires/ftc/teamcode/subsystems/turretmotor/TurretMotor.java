@@ -27,7 +27,7 @@ public class TurretMotor extends SubsystemBase {
     private final Supplier<Pose> poseSupplier;
     private final TurretAim aim;
     private final TurretController controller = new TurretController();
-    private final double zeroTicks;
+    private double zeroTicks;
 
     private State state = State.IDLE;
     private State requestedState = State.IDLE;
@@ -70,8 +70,9 @@ public class TurretMotor extends SubsystemBase {
     }
 
     public void zeroHere() {
-        motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        zeroTicks = motor.getCurrentPosition();
+        PosePersistency.saveTurretMotorZero(zeroTicks);
+        readEncoder();
     }
 
     public void readEncoder() {
