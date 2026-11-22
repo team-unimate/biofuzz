@@ -13,22 +13,22 @@ public class StallTest {
 
     @Test
     public void pushingHardAndNotMovingIsStall() {
-        assertTrue(TurretMotor.isPushingWithoutMoving(0.8, FAR, STOPPED));
-        assertTrue(TurretMotor.isPushingWithoutMoving(-0.8, -FAR, STOPPED));
+        assertTrue(TurretController.isPushingWithoutMoving(0.8, FAR, STOPPED));
+        assertTrue(TurretController.isPushingWithoutMoving(-0.8, -FAR, STOPPED));
     }
 
     @Test
     public void movingIsNotStall() {
-        assertFalse(TurretMotor.isPushingWithoutMoving(0.8, FAR, MOVING));
+        assertFalse(TurretController.isPushingWithoutMoving(0.8, FAR, MOVING));
     }
 
     @Test
     public void lowPowerIsNotStall() {
-        assertFalse(TurretMotor.isPushingWithoutMoving(0.1, FAR, STOPPED));
+        assertFalse(TurretController.isPushingWithoutMoving(0.1, FAR, STOPPED));
     }
 
     @Test
     public void onTargetIsNotStall() {
-        assertFalse(TurretMotor.isPushingWithoutMoving(0.8, CLOSE, STOPPED));
+        assertFalse(TurretController.isPushingWithoutMoving(0.8, CLOSE, STOPPED));
     }
 }

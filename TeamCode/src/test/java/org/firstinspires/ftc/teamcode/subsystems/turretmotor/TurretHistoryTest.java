@@ -30,7 +30,7 @@ public class TurretHistoryTest {
         TurretHistory h = new TurretHistory();
         h.add(0.0, 0, 0, 0, Math.PI - 0.1);
         h.add(0.1, 0, 0, 0, -Math.PI + 0.1);
-        assertEquals(Math.PI, Math.abs(TurretMotor.wrap(h.at(0.05).heading)), EPS);
+        assertEquals(Math.PI, Math.abs(TurretMath.wrap(h.at(0.05).heading)), EPS);
     }
 
     @Test

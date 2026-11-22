@@ -14,12 +14,12 @@ public class LeadPivotTest {
     private static final double AIM_Y = 0;
 
     private static double[] solve(double velX, double velY) {
-        return TurretMotor.leadPivot(0, 0, velX, velY, AIM_X, AIM_Y, 0.15, TOF);
+        return TurretMath.leadPivot(0, 0, velX, velY, AIM_X, AIM_Y, 0.15, TOF);
     }
 
     private static double leadAngle(double[] lead) {
-        return TurretMotor.wrap(TurretMotor.odomAngle(lead[0], lead[1], 0, AIM_X, AIM_Y)
-                - TurretMotor.odomAngle(0, 0, 0, AIM_X, AIM_Y));
+        return TurretMath.wrap(TurretMath.odomAngle(lead[0], lead[1], 0, AIM_X, AIM_Y)
+                - TurretMath.odomAngle(0, 0, 0, AIM_X, AIM_Y));
     }
 
     private static double distance(double[] lead) {

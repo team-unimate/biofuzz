@@ -14,6 +14,7 @@ import com.seattlesolvers.solverslib.util.TelemetryData;
 
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMath;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotorConstants;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
@@ -113,9 +114,9 @@ public class VisionTuningTeleOp extends CommandOpMode {
             return;
         }
 
-        double[] pivot = TurretMotor.pivot(pose.x(), pose.y(), pose.heading(),
+        double[] pivot = TurretMath.pivot(pose.x(), pose.y(), pose.heading(),
                 TurretMotorConstants.MOTOR_TURRET_FWD, TurretMotorConstants.MOTOR_TURRET_LEFT);
-        double odomAngle = TurretMotor.odomAngle(pivot[0], pivot[1], pose.heading(),
+        double odomAngle = TurretMath.odomAngle(pivot[0], pivot[1], pose.heading(),
                 turret.getCell().pose.x(), turret.getCell().pose.y());
         double odomDistance = Math.hypot(turret.getCell().pose.x() - pivot[0], turret.getCell().pose.y() - pivot[1]);
 
@@ -125,7 +126,7 @@ public class VisionTuningTeleOp extends CommandOpMode {
         telemetryData.addData("Bias deg", Math.toDegrees(turret.getBias()));
         telemetryData.addData("Aim target deg (odom + bias)", Math.toDegrees(turret.getTarget()));
         telemetryData.addData("Aim distance in", turret.getDistance());
-        telemetryData.addData("Aim error deg (target - turret)", Math.toDegrees(TurretMotor.wrap(turret.getTarget() - turret.getAngle())));
+        telemetryData.addData("Aim error deg (target - turret)", Math.toDegrees(TurretMath.wrap(turret.getTarget() - turret.getAngle())));
         telemetryData.addData("Aim offset deg", TurretMotorConstants.AIM_OFFSET_DEG);
         telemetryData.addData("Odom angle deg / distance in",
                 String.format(Locale.US, "%.1f / %.1f", Math.toDegrees(odomAngle), odomDistance));
@@ -137,12 +138,12 @@ public class VisionTuningTeleOp extends CommandOpMode {
             return;
         }
 
-        double visionAngle = TurretMotor.visionAngle(obs.turretAngleAtCapture, obs.bearing, pose.heading(), obs.headingAtCapture);
+        double visionAngle = TurretMath.visionAngle(obs.turretAngleAtCapture, obs.bearing, pose.heading(), obs.headingAtCapture);
         telemetryData.addData("Vision tags", obs.tagCount());
         telemetryData.addData("Vision bearing deg (from turret)", Math.toDegrees(obs.bearing));
         telemetryData.addData("Vision angle deg / distance in",
                 String.format(Locale.US, "%.1f / %.1f", Math.toDegrees(visionAngle), obs.distance));
-        double disagree = Math.toDegrees(TurretMotor.wrap(visionAngle - odomAngle));
+        double disagree = Math.toDegrees(TurretMath.wrap(visionAngle - odomAngle));
         telemetryData.addData("Vision - odom angle deg", disagree);
         telemetryData.addData("Vision accepted", Math.abs(disagree) <= TurretMotorConstants.VISION_MAX_DISAGREE_DEG);
         telemetryData.addData("Vision - odom distance in", obs.distance - odomDistance);
