@@ -22,8 +22,8 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.Shooter;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.ShooterConstants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
@@ -33,7 +33,7 @@ public class testMatch extends CommandOpMode {
     public static long AIM_TIMEOUT_MS = 2000;
 
     private Follower follower;
-    private Turret turret;
+    private TurretMotor turret;
     private Shooter shooter;
     private Intake intake;
     private Field.Alliance alliance;
@@ -43,9 +43,7 @@ public class testMatch extends CommandOpMode {
     private Pose startToParkControl1;
 
     private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = alliance == Field.Alliance.RED
-                ? PoseFactory.degrees().mirrorAroundPoint(Field.CENTER_X, Field.CENTER_Y)
-                : PoseFactory.degrees();
+        PoseFactory poseFactory = Field.poses(alliance);
         start = poseFactory.of(102, 133, -90);
         startToParkStart = poseFactory.of(102, 132.9127, -90);
         startToPark = poseFactory.of(129.8212, 48.0017, 300);
@@ -71,7 +69,7 @@ public class testMatch extends CommandOpMode {
         follower = Constants.createFollower(hardwareMap);
         TurretHistory history = new TurretHistory();
         Limelight limelight = new Limelight(hardwareMap, history);
-        turret = new Turret(hardwareMap, limelight, history, follower::pose);
+        turret = new TurretMotor(hardwareMap, limelight, history, follower::pose);
         intake = new Intake(hardwareMap);
         shooter = new Shooter(hardwareMap, turret::getDistance);
         register(limelight, turret, shooter);
@@ -97,7 +95,7 @@ public class testMatch extends CommandOpMode {
         follower.update();
         PosePersistency.saveAlliance(alliance);
         turret.setAlliance(alliance);
-        turret.setState(Turret.State.AIM);
+        turret.setState(TurretMotor.State.AIM);
         shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
         shooter.setState(Shooter.State.FIXED);
         schedule(autoRoutine());

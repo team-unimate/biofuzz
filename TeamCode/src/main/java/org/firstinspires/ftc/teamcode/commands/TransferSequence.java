@@ -9,17 +9,18 @@ import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
 import org.firstinspires.ftc.teamcode.subsystems.gate.Gate;
 import org.firstinspires.ftc.teamcode.subsystems.intake.Intake;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
 
 public class TransferSequence extends SequentialCommandGroup {
-    public TransferSequence(Intake intake, Gate gate, Turret turret) {
+    public TransferSequence(Intake intake, Gate gate) {
         addCommands(
                 new GateClose(gate),
                 new WaitCommand(200),
                 new intakeOn(intake),
-                new WaitCommand(1500),
                 new GateOpen(gate),
-                new intakeOff(intake)
+                new WaitCommand(1500),
+                new intakeOff(intake),
+                new GateClose(gate)
+
         );
         addRequirements(intake, gate);
     }

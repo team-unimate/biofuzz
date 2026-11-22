@@ -13,7 +13,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.FieldImage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -120,7 +120,7 @@ public class OdometryDriftTest extends LinearOpMode {
     private double[] drift(Pose start) {
         double dx = measured.x() - start.x();
         double dy = measured.y() - start.y();
-        double dh = Math.toDegrees(Turret.wrap(measured.heading() - start.heading()));
+        double dh = Math.toDegrees(TurretMotor.wrap(measured.heading() - start.heading()));
         double dist = Math.hypot(dx, dy);
         double per100 = measuredAtDistance > 0 ? dist / measuredAtDistance * 100 : 0;
         return new double[]{dx, dy, dist, dh, per100};

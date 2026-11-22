@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems.turretmotor;
 
-import static org.firstinspires.ftc.teamcode.subsystems.turret.TurretConstants.*;
 import static org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotorConstants.*;
 
 import com.pedropathing.math.Pose;
@@ -17,12 +16,12 @@ import com.seattlesolvers.solverslib.util.TelemetryData;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.HiveCells;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
 import org.firstinspires.ftc.teamcode.vision.CellObservation;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
+import java.util.function.DoubleUnaryOperator;
 import java.util.function.Supplier;
 
 public class TurretMotor extends SubsystemBase {
@@ -142,8 +141,8 @@ public class TurretMotor extends SubsystemBase {
     }
 
     public void zeroHere() {
-        zeroTicks = motor.getCurrentPosition();
-        PosePersistency.saveTurretMotorZero(zeroTicks);
+        motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     public void readEncoder() {
@@ -202,22 +201,22 @@ public class TurretMotor extends SubsystemBase {
             return;
         }
 
-        double[] pivot = Turret.pivot(botPose.x(), botPose.y(), botPose.heading(), MOTOR_TURRET_FWD, MOTOR_TURRET_LEFT);
-        odomAngle = Turret.odomAngle(pivot[0], pivot[1], botPose.heading(), cell.pose.x(), cell.pose.y());
+        double[] pivot = pivot(botPose.x(), botPose.y(), botPose.heading(), MOTOR_TURRET_FWD, MOTOR_TURRET_LEFT);
+        odomAngle = odomAngle(pivot[0], pivot[1], botPose.heading(), cell.pose.x(), cell.pose.y());
         double odomDistance = Math.hypot(cell.pose.x() - pivot[0], cell.pose.y() - pivot[1]);
         double vx = SHOOT_ON_THE_MOVE ? velocityX : 0;
         double vy = SHOOT_ON_THE_MOVE ? velocityY : 0;
-        double[] leadPivot = Turret.leadPivot(pivot[0], pivot[1], vx, vy, cell.pose.x(), cell.pose.y(),
+        double[] leadPivot = leadPivot(pivot[0], pivot[1], vx, vy, cell.pose.x(), cell.pose.y(),
                 TRANSFER_DELAY_S, this::timeOfFlight);
         leadTime = leadPivot[2];
         virtualPose = new Pose(botPose.x() + vx * leadTime, botPose.y() + vy * leadTime, botPose.heading());
-        double leadAngle = Turret.odomAngle(leadPivot[0], leadPivot[1], botPose.heading(), cell.pose.x(), cell.pose.y());
+        double leadAngle = odomAngle(leadPivot[0], leadPivot[1], botPose.heading(), cell.pose.x(), cell.pose.y());
         double leadDistance = Math.hypot(cell.pose.x() - leadPivot[0], cell.pose.y() - leadPivot[1]);
 
         CellObservation obs = USE_VISION && vision != null && vision.hasNewFrame() ? vision.getObservation(cell) : null;
         if (obs != null) {
-            double visionAngle = Turret.visionAngle(obs.turretAngleAtCapture, obs.bearing, botPose.heading(), obs.headingAtCapture);
-            double error = Turret.wrap(visionAngle - odomAngle);
+            double visionAngle = visionAngle(obs.turretAngleAtCapture, obs.bearing, botPose.heading(), obs.headingAtCapture);
+            double error = wrap(visionAngle - odomAngle);
             if (Math.abs(error) <= Math.toRadians(VISION_MAX_DISAGREE_DEG)) {
                 bias += VISION_BIAS_ALPHA * (error - bias);
                 visionDistance = obs.distance;
@@ -227,10 +226,10 @@ public class TurretMotor extends SubsystemBase {
 
         seen = !Double.isNaN(lastSeenTime) && (now - lastSeenTime) * 1000 <= VISION_LOCK_VALID_MS;
         if (!seen) bias *= Math.exp(-BIAS_DECAY_PER_S * dt);
-        target = Turret.wrap(leadAngle + bias + Math.toRadians(AIM_OFFSET_DEG));
+        target = wrap(leadAngle + bias + Math.toRadians(AIM_OFFSET_DEG));
         if (!Double.isNaN(previousTarget) && dt > 0) {
             double maxRate = Math.toRadians(MOTOR_FF_MAX_RATE_DEG_S);
-            double rate = Range.clip(Turret.wrap(target - previousTarget) / dt, -maxRate, maxRate);
+            double rate = Range.clip(wrap(target - previousTarget) / dt, -maxRate, maxRate);
             targetRate += MOTOR_FF_FILTER_ALPHA * (rate - targetRate);
         }
         previousTarget = target;
@@ -429,5 +428,31 @@ public class TurretMotor extends SubsystemBase {
 
     public HiveCells.Cell getCell() {
         return cell;
+    }
+
+    public static double[] pivot(double x, double y, double heading, double pivotForward, double pivotLeft) {
+        double c = Math.cos(heading), s = Math.sin(heading);
+        return new double[]{x + pivotForward * c - pivotLeft * s, y + pivotForward * s + pivotLeft * c};
+    }
+
+    public static double odomAngle(double pivotX, double pivotY, double heading, double aimX, double aimY) {
+        return wrap(Math.atan2(aimY - pivotY, aimX - pivotX) - heading);
+    }
+
+    public static double visionAngle(double turretAtCapture, double bearing, double headingNow, double headingAtCapture) {
+        return wrap(turretAtCapture + bearing - wrap(headingNow - headingAtCapture));
+    }
+
+    public static double[] leadPivot(double x, double y, double velX, double velY, double aimX, double aimY,
+                                     double transferDelay, DoubleUnaryOperator timeOfFlight) {
+        double t = transferDelay + timeOfFlight.applyAsDouble(Math.hypot(aimX - x, aimY - y));
+        for (int i = 0; i < 3; i++) {
+            t = transferDelay + timeOfFlight.applyAsDouble(Math.hypot(aimX - (x + velX * t), aimY - (y + velY * t)));
+        }
+        return new double[]{x + velX * t, y + velY * t, t};
+    }
+
+    public static double wrap(double radians) {
+        return Math.atan2(Math.sin(radians), Math.cos(radians));
     }
 }

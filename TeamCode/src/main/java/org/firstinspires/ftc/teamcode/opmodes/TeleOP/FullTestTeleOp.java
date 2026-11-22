@@ -15,7 +15,8 @@ import com.seattlesolvers.solverslib.util.TelemetryData;
 import org.firstinspires.ftc.teamcode.commands.IntakeFlower.IntakeFlowerDown;
 import org.firstinspires.ftc.teamcode.commands.IntakeFlower.IntakeFlowerUp;
 import org.firstinspires.ftc.teamcode.commands.TransferSequence;
-import org.firstinspires.ftc.teamcode.commands.field.WallResetPose;
+import org.firstinspires.ftc.teamcode.commands.field.ResetPose;
+import org.firstinspires.ftc.teamcode.commands.field.ResetHeading;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeReverse;
@@ -28,7 +29,7 @@ import org.firstinspires.ftc.teamcode.subsystems.intakeFlower.IntakeFlower;
 import org.firstinspires.ftc.teamcode.subsystems.pollensensor.PollenSensor;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.Shooter;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.ShooterConstants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotorConstants;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
@@ -68,10 +69,10 @@ public class FullTestTeleOp extends CommandOpMode {
         turret = new TurretMotor(hardwareMap, limelight, history, follower::pose);
         shooter = new Shooter(hardwareMap, turret::getDistance);
         intake = new Intake(hardwareMap);
-        flower = new IntakeFlower(hardwareMap);
+        flower = new IntakeFlower(hardwareMap, intake);
         gate = new Gate(hardwareMap);
         pollenSensor = new PollenSensor(hardwareMap);
-        indicator = new Indicator(hardwareMap, turret::isAimed);
+        indicator = new Indicator(hardwareMap, turret::isAimed, pollenSensor::isPresent);
         register(limelight, turret, shooter, intake, flower, gate, pollenSensor, indicator);
 
         driver = new GamepadEx(gamepad1);
@@ -83,31 +84,25 @@ public class FullTestTeleOp extends CommandOpMode {
 
         driver.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenActive(new intakeOn(intake));
         driver.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenInactive(new intakeOff(intake));
-        driver.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).whenPressed(new TransferSequence(intake, gate, null));
+        driver.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).whenPressed(new TransferSequence(intake, gate));
         driver.getGamepadButton(GamepadKeys.Button.Y).whenActive(new intakeReverse(intake));
         driver.getGamepadButton(GamepadKeys.Button.Y).whenInactive(new intakeOff(intake));
 
-        driver.getGamepadButton(GamepadKeys.Button.A).whenPressed(() -> {
-            shooterOn = !shooterOn;
-            shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
-            shooter.setState(shooterOn ? Shooter.State.DISTANCE : Shooter.State.OFF);
-        });
+        driver.getGamepadButton(GamepadKeys.Button.A).whenPressed(() -> shooterOn = !shooterOn);
 
         driver.getGamepadButton(GamepadKeys.Button.DPAD_UP).whenPressed(new IntakeFlowerUp(flower));
         driver.getGamepadButton(GamepadKeys.Button.DPAD_DOWN).whenPressed(new IntakeFlowerDown(flower));
 
-        driver.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(new WallResetPose(follower, WallResetPose.Axis.X));
-        driver.getGamepadButton(GamepadKeys.Button.DPAD_RIGHT).whenPressed(new WallResetPose(follower, WallResetPose.Axis.Y));
+        driver.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(new ResetPose(follower, () -> alliance));
+        driver.getGamepadButton(GamepadKeys.Button.START).whenPressed(
+                new ResetHeading(follower, () -> alliance == Field.Alliance.RED ? Math.PI : 0));
     }
 
     @Override
     public void initialize_loop() {
         if (gamepad1.x) alliance = Field.Alliance.BLUE;
         if (gamepad1.b) alliance = Field.Alliance.RED;
-        if (gamepad1.y) {
-            useSavedPose = false;
-            turret.zeroHere();
-        }
+
 
         turret.readEncoder();
         telemetryData.addData("Controls", "X = BLUE, B = RED, Y = ignore saved pose and zero turret here");
@@ -121,7 +116,7 @@ public class FullTestTeleOp extends CommandOpMode {
 
     @Override
     public void preRun() {
-        Pose start = new Pose(START_X_IN, START_Y_IN, Math.toRadians(START_HEADING_DEG));
+        Pose start = Field.poses(alliance).of(START_X_IN, START_Y_IN, START_HEADING_DEG);
         follower.setPose(useSavedPose ? PosePersistency.getPose(start) : start);
         turret.setAlliance(alliance);
         PosePersistency.saveAlliance(alliance);
@@ -131,18 +126,21 @@ public class FullTestTeleOp extends CommandOpMode {
     @Override
     public void run() {
         follower.manual(ManualDrive.fieldCentric(
-                gamepad1.left_stick_y,
-                gamepad1.left_stick_x,
+                -gamepad1.left_stick_y,
+                -gamepad1.left_stick_x,
                 -gamepad1.right_stick_x,
                 follower.pose().heading() + (alliance == Field.Alliance.RED ? Math.PI : 0)
         ));
         follower.update();
 
+        shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
+        shooter.setState(shooterOn ? Shooter.State.DISTANCE : Shooter.State.OFF);
+
         super.run();
 
         PosePersistency.savePose(follower.pose());
 
-        telemetryData.addData("Controls", "LB intake, RB transfer, Y reverse, A shooter, DPAD U/D flower up/down, DPAD L = wall reset X (side wall), DPAD R = wall reset Y (top/bottom wall)");
+        telemetryData.addData("Controls", "LB intake, RB transfer, Y reverse, A shooter, DPAD U/D flower up/down, DPAD L = reset pose to alliance corner (BLUE 133,132,-90 / RED 11,132,-90), START = reset heading (robot facing away from you)");
         telemetryData.addData("Alliance", alliance);
         telemetryData.addData("Pose", follower.pose());
         telemetryData.addData("Intake state", intake.getState());
@@ -150,6 +148,7 @@ public class FullTestTeleOp extends CommandOpMode {
         pollenSensor.addTelemetry(telemetryData);
         indicator.addTelemetry(telemetryData);
         gate.addTelemetry(telemetryData);
+        telemetryData.addData("TUNING_RPM", ShooterConstants.TUNING_RPM);
         shooter.addTelemetry(telemetryData);
         turret.addTelemetry(telemetryData);
         telemetryData.update();

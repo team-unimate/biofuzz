@@ -13,7 +13,6 @@ import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.util.TelemetryData;
 
-import org.firstinspires.ftc.teamcode.commands.ShootWhenReady;
 import org.firstinspires.ftc.teamcode.commands.field.ResetPose;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
@@ -24,7 +23,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.Shooter;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.ShooterConstants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotorConstants;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
@@ -112,7 +111,7 @@ public class TurretMotorTeleOp extends CommandOpMode {
 
     @Override
     public void preRun() {
-        Pose start = new Pose(START_X_IN, START_Y_IN, Math.toRadians(START_HEADING_DEG));
+        Pose start = Field.poses(alliance).of(START_X_IN, START_Y_IN, START_HEADING_DEG);
         follower.setPose(useSavedPose ? PosePersistency.getPose(start) : start);
         turret.setAlliance(alliance);
         PosePersistency.saveAlliance(alliance);

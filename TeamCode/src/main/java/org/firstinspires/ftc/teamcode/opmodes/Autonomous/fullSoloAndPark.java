@@ -14,19 +14,26 @@ import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 import com.seattlesolvers.solverslib.pedroCommand.FollowPathCommand;
+import com.seattlesolvers.solverslib.util.TelemetryData;
 
 import org.firstinspires.ftc.teamcode.commands.IntakeFlower.IntakeFlowerDown;
+import org.firstinspires.ftc.teamcode.commands.IntakeFlower.IntakeFlowerUp;
+import org.firstinspires.ftc.teamcode.commands.TransferSequence;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeShooting;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.gate.Gate;
+import org.firstinspires.ftc.teamcode.subsystems.indicator.Indicator;
 import org.firstinspires.ftc.teamcode.subsystems.intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.intakeFlower.IntakeFlower;
+import org.firstinspires.ftc.teamcode.subsystems.pollensensor.PollenSensor;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.Shooter;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.ShooterConstants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotorConstants;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
@@ -35,10 +42,15 @@ public class fullSoloAndPark extends CommandOpMode {
 
     private Follower follower;
     private Intake intake;
-    private IntakeFlower intakeFlower;
+    private IntakeFlower flower;
+    private Gate gate;
+    private PollenSensor pollenSensor;
+    private Indicator indicator;
     private Shooter shooter;
-    private Turret turret;
-    private Field.Alliance alliance;
+    private TurretMotor turret;
+    private Limelight limelight;
+    private TelemetryData telemetryData;
+    private Field.Alliance alliance = Field.Alliance.BLUE;
 
     private  Pose start;
     private  Pose initToGarden;
@@ -55,50 +67,45 @@ public class fullSoloAndPark extends CommandOpMode {
     private  Pose hive2ToShoot;
     private  Pose shootToPark;
 
-    private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = alliance == Field.Alliance.RED
-                ? PoseFactory.degrees().mirrorAroundPoint(Field.CENTER_X, Field.CENTER_Y)
-                : PoseFactory.degrees();
+    private void buildPoses() {
+        PoseFactory poseFactory = Field.poses(alliance);
         start = poseFactory.of(86.7, 133.8, 0);
         initToGarden = poseFactory.of(132.9873, 133.1039, 0.1951);
         gardenAdjustAngleStart = poseFactory.of(132.9873, 133.1039, 0);
         gardenAdjustAngle = poseFactory.of(125.502, 125.6921, -110);
-        gardenToHive1 = poseFactory.of(99.302, 12.0939, -107.1013);
+        gardenToHive1 = poseFactory.of(99.302, 13.0939, -155.1013);
         gardenToHive1Control1 = poseFactory.of(100.3544, 99.0334, 0);
         gardenToHive1Control2 = poseFactory.of(111.3959, 51.4023, 0);
         hive1AdjustAngleStart = poseFactory.of(99.302, 12.0939, -105);
         hive1AdjustAngle = poseFactory.of(104.7053, 23.0347, 90);
-        hive1ToHive2 = poseFactory.of(127.9237, 94.8496, -0.8186);
+        hive1ToHive2 = poseFactory.of(123.9237, 94.8496, -0.8186);
         hive1ToHive2Control1 = poseFactory.of(106.1536, 95.1607, 0);
         hive2ToShootStart = poseFactory.of(127.9237, 94.8496, 0);
         hive2ToShoot = poseFactory.of(109.1074, 108.5861, -75);
-        shootToPark = poseFactory.of(127.2001, 49.8667, -72.8749);
+        shootToPark = poseFactory.of(120.2001, 20.8667, -72.8749);
     }
     public Command autoRoutine() {
         return new SequentialCommandGroup(
                 new WaitUntilCommand(() -> turret.isAimed() && shooter.flywheelReady()).withTimeout(AIM_TIMEOUT_MS),
-                new intakeShooting(intake, shooter),
-                new WaitCommand(300),
-                new intakeShooting(intake, shooter),
-                new WaitCommand(300),
+                new TransferSequence(intake, gate),
                 new intakeOn(intake),
                 new FollowPathCommand(follower, initToGarden()),
+                new WaitCommand(1300),
                 new intakeOff(intake),
-                new intakeShooting(intake, shooter),
-                new WaitCommand(300),
-                new intakeShooting(intake, shooter),
-                new WaitCommand(300),
                 new FollowPathCommand(follower, gardenAdjustAngle()),
-                new IntakeFlowerDown(intakeFlower),
+                new TransferSequence(intake, gate),
+                new IntakeFlowerDown(flower),
+                new intakeOn(intake),
                 new FollowPathCommand(follower, gardenToHive1()),
-                new intakeShooting(intake, shooter),
-                new WaitCommand(300),
-                new intakeShooting(intake, shooter),
-                new WaitCommand(300),
+                new intakeOff(intake),
+                new TransferSequence(intake, gate),
                 new FollowPathCommand(follower, hive1AdjustAngle()),
+                new intakeOn(intake),
                 new FollowPathCommand(follower, hive1ToHive2()),
-                new FollowPathCommand(follower, hive2ToShoot()),
-                new FollowPathCommand(follower, shootToPark())
+                new WaitCommand(1000),
+                new intakeOff(intake),
+                new FollowPathCommand(follower, shootToPark()),
+                new TransferSequence(intake, gate)
         );
     }
 
@@ -108,13 +115,17 @@ public class fullSoloAndPark extends CommandOpMode {
 
         follower = Constants.createFollower(hardwareMap);
         TurretHistory history = new TurretHistory();
-        Limelight limelight = new Limelight(hardwareMap, history);
-        turret = new Turret(hardwareMap, limelight, history, follower::pose);
+        limelight = new Limelight(hardwareMap, history,
+                () -> TurretMotorConstants.MOTOR_TURRET_FWD, () -> TurretMotorConstants.MOTOR_TURRET_LEFT);
+        turret = new TurretMotor(hardwareMap, limelight, history, follower::pose);
         shooter = new Shooter(hardwareMap, turret::getDistance);
         intake = new Intake(hardwareMap);
-        intakeFlower = new IntakeFlower(hardwareMap);
-        register(limelight, turret, shooter, intake, intakeFlower);
-        alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
+        flower = new IntakeFlower(hardwareMap, intake);
+        gate = new Gate(hardwareMap);
+        pollenSensor = new PollenSensor(hardwareMap);
+        indicator = new Indicator(hardwareMap, turret::isAimed, pollenSensor::isPresent);
+        register(limelight, turret, shooter, intake, flower, gate, pollenSensor, indicator);
+        flower.setState(IntakeFlower.State.UP);
     }
 
     @Override
@@ -130,15 +141,14 @@ public class fullSoloAndPark extends CommandOpMode {
 
     @Override
     public void preRun() {
-        buildPoses(alliance);
+        buildPoses();
         follower.setPose(start);
         follower.update();
         PosePersistency.saveAlliance(alliance);
         PosePersistency.savePose(start);
         turret.setAlliance(alliance);
-        turret.setState(Turret.State.AIM);
-        shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
-        shooter.setState(Shooter.State.FIXED);
+        turret.setState(TurretMotor.State.AIM);
+        shooter.setState(Shooter.State.DISTANCE);
         schedule(autoRoutine());
     }
 

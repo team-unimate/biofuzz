@@ -26,8 +26,8 @@ import org.firstinspires.ftc.teamcode.subsystems.intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.intakeFlower.IntakeFlower;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.Shooter;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.ShooterConstants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
@@ -39,7 +39,7 @@ public class stealAnd3Hives extends CommandOpMode {
     private Follower follower;
     private Intake intake;
     private Shooter shooter;
-    private Turret turret;
+    private TurretMotor turret;
     private IntakeFlower intakeFlower;
     private Field.Alliance alliance;
 
@@ -62,9 +62,7 @@ public class stealAnd3Hives extends CommandOpMode {
 
 
     private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = alliance == Field.Alliance.RED
-                ? PoseFactory.degrees().mirrorAroundPoint(Field.CENTER_X, Field.CENTER_Y)
-                : PoseFactory.degrees();
+        PoseFactory poseFactory = Field.poses(alliance);
 
 
         start = poseFactory.of(86, 133, 180);
@@ -129,8 +127,9 @@ public class stealAnd3Hives extends CommandOpMode {
         follower = Constants.createFollower(hardwareMap);
         TurretHistory history = new TurretHistory();
         Limelight limelight = new Limelight(hardwareMap, history);
-        turret = new Turret(hardwareMap, limelight, history, follower::pose);
+        turret = new TurretMotor(hardwareMap, limelight, history, follower::pose);
         intake = new Intake(hardwareMap);
+        intakeFlower = new IntakeFlower(hardwareMap, intake);
         shooter = new Shooter(hardwareMap, turret::getDistance);
         register(limelight, turret, shooter);
         alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
@@ -155,7 +154,7 @@ public class stealAnd3Hives extends CommandOpMode {
         follower.update();
         PosePersistency.saveAlliance(alliance);
         turret.setAlliance(alliance);
-        turret.setState(Turret.State.AIM);
+        turret.setState(TurretMotor.State.AIM);
         shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
         shooter.setState(Shooter.State.FIXED);
         schedule(autoRoutine());

@@ -11,8 +11,8 @@ import com.seattlesolvers.solverslib.command.SubsystemBase;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.field.HiveCells;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretConstants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotorConstants;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,7 +41,7 @@ public class Limelight extends SubsystemBase {
     }
 
     public Limelight(HardwareMap hardwareMap, TurretHistory history) {
-        this(hardwareMap, history, () -> TurretConstants.TURRET_FWD, () -> TurretConstants.TURRET_LEFT);
+        this(hardwareMap, history, () -> TurretMotorConstants.MOTOR_TURRET_FWD, () -> TurretMotorConstants.MOTOR_TURRET_LEFT);
     }
 
     public Limelight(HardwareMap hardwareMap, TurretHistory history, DoubleSupplier pivotForward, DoubleSupplier pivotLeft) {

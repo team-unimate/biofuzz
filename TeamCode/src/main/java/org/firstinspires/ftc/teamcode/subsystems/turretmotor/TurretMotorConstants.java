@@ -42,4 +42,27 @@ public class TurretMotorConstants {
     public static boolean MOTOR_USE_MANUAL_ANGLE = false;
     public static double MOTOR_MANUAL_ANGLE_DEG = 0;
     public static double MOTOR_MANUAL_STEP_DEG = 15;
+
+    public static double AIM_OFFSET_DEG = 0;
+    public static double IDLE_ANGLE_DEG = 0;
+
+    public static boolean USE_VISION = false;
+    public static double VISION_MAX_DISAGREE_DEG = 10;
+    public static double BIAS_DECAY_PER_S = 0.5;
+    public static double VISION_BIAS_ALPHA = 0.2;
+    public static double VISION_LOCK_VALID_MS = 500;
+    public static boolean ALLOW_ODOMETRY_ONLY_SHOTS = true;
+
+    public static boolean SHOOT_ON_THE_MOVE = false;
+    public static double TRANSFER_DELAY_S = 0.3;
+    public static double[] TOF_DIST_IN = {24, 48, 72, 96, 120};
+    public static double[] TOF_S = {0.35, 0.45, 0.65, 0.65, 0.75};
+    public static double MAX_SHOOT_SPEED_IN_S = 30;
+    public static double POSE_VELOCITY_ALPHA = 0.3;
+    public static double MAX_ROBOT_SPEED_IN_S = 120;
+
+    public static double MIN_SHOT_DIST = 24;
+    public static double MAX_SHOT_DIST = 120;
+
+    public static boolean SHOW_TAGS = false;
 }
