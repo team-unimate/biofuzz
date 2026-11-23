@@ -17,7 +17,6 @@ import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 import com.seattlesolvers.solverslib.pedroCommand.FollowPathCommand;
 
 import org.firstinspires.ftc.teamcode.commands.intake.intakeShooting;
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.Shooter;
@@ -36,14 +35,13 @@ public class testMatch extends CommandOpMode {
     private TurretMotor turret;
     private Shooter shooter;
     private Intake intake;
-    private Field.Alliance alliance;
     private Pose start;
     private Pose startToParkStart;
     private Pose startToPark;
     private Pose startToParkControl1;
 
-    private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = Field.poses(alliance);
+    private void buildPoses() {
+        PoseFactory poseFactory = PoseFactory.degrees();
         start = poseFactory.of(102, 133, -90);
         startToParkStart = poseFactory.of(102, 132.9127, -90);
         startToPark = poseFactory.of(129.8212, 48.0017, 300);
@@ -73,28 +71,22 @@ public class testMatch extends CommandOpMode {
         intake = new Intake(hardwareMap);
         shooter = new Shooter(hardwareMap, turret::getDistance);
         register(limelight, turret, shooter);
-        alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
     }
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
         if (gamepad1.y) turret.zeroHere();
-        telemetry.addData("Controls", "X = BLUE, B = RED, Y = zero turret here (point it forward)");
+        telemetry.addData("Controls", "Y = zero turret here (point it forward)");
         turret.readEncoder();
         telemetry.addData("Turret angle deg (point it forward)", Math.toDegrees(turret.getAngle()));
-        telemetry.addData("Alliance", alliance);
         telemetry.update();
     }
 
     @Override
     public void preRun() {
-        buildPoses(alliance);
+        buildPoses();
         follower.setPose(start);
         follower.update();
-        PosePersistency.saveAlliance(alliance);
-        turret.setAlliance(alliance);
         turret.setState(TurretMotor.State.AIM);
         shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
         shooter.setState(Shooter.State.FIXED);

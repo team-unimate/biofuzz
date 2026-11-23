@@ -20,7 +20,7 @@ import org.firstinspires.ftc.teamcode.commands.field.ResetHeading;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeReverse;
-import org.firstinspires.ftc.teamcode.field.Field;
+import com.pedropathing.api.PoseFactory;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.gate.Gate;
 import org.firstinspires.ftc.teamcode.subsystems.indicator.Indicator;
@@ -54,7 +54,6 @@ public class FullTestTeleOp extends CommandOpMode {
     private GamepadEx driver;
     private TelemetryData telemetryData;
 
-    private Field.Alliance alliance;
     private boolean useSavedPose;
     private boolean shooterOn = false;
 
@@ -79,7 +78,6 @@ public class FullTestTeleOp extends CommandOpMode {
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         telemetryData = new TelemetryData(telemetry);
 
-        alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
         useSavedPose = PosePersistency.hasPose();
 
         driver.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenActive(new intakeOn(intake));
@@ -93,20 +91,15 @@ public class FullTestTeleOp extends CommandOpMode {
         driver.getGamepadButton(GamepadKeys.Button.DPAD_UP).whenPressed(new IntakeFlowerUp(flower));
         driver.getGamepadButton(GamepadKeys.Button.DPAD_DOWN).whenPressed(new IntakeFlowerDown(flower));
 
-        driver.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(new ResetPose(follower, () -> alliance));
+        driver.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(new ResetPose(follower));
         driver.getGamepadButton(GamepadKeys.Button.START).whenPressed(
-                new ResetHeading(follower, () -> alliance == Field.Alliance.RED ? Math.PI : 0));
+                new ResetHeading(follower, () -> 0));
     }
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
-
-
         turret.readEncoder();
-        telemetryData.addData("Controls", "X = BLUE, B = RED, Y = ignore saved pose and zero turret here");
-        telemetryData.addData("Alliance", alliance + (alliance == PosePersistency.getAlliance(null) ? " (from auto)" : ""));
+        telemetryData.addData("Controls", "Y = ignore saved pose and zero turret here");
         telemetryData.addData("Start pose", useSavedPose ? "saved " + PosePersistency.getPose(null) : "dashboard START_*");
         telemetryData.addData("Turret deg", Math.toDegrees(turret.getAngle()));
         telemetryData.addData("Turret ticks", turret.getTicks());
@@ -116,10 +109,8 @@ public class FullTestTeleOp extends CommandOpMode {
 
     @Override
     public void preRun() {
-        Pose start = Field.poses(alliance).of(START_X_IN, START_Y_IN, START_HEADING_DEG);
+        Pose start = PoseFactory.degrees().of(START_X_IN, START_Y_IN, START_HEADING_DEG);
         follower.setPose(useSavedPose ? PosePersistency.getPose(start) : start);
-        turret.setAlliance(alliance);
-        PosePersistency.saveAlliance(alliance);
         turret.setState(TurretMotor.State.AIM);
     }
 
@@ -129,7 +120,7 @@ public class FullTestTeleOp extends CommandOpMode {
                 -gamepad1.left_stick_y,
                 -gamepad1.left_stick_x,
                 -gamepad1.right_stick_x,
-                follower.pose().heading() + (alliance == Field.Alliance.RED ? Math.PI : 0)
+                follower.pose().heading()
         ));
         follower.update();
 
@@ -140,8 +131,7 @@ public class FullTestTeleOp extends CommandOpMode {
 
         PosePersistency.savePose(follower.pose());
 
-        telemetryData.addData("Controls", "LB intake, RB transfer, Y reverse, A shooter, DPAD U/D flower up/down, DPAD L = reset pose to alliance corner (BLUE 133,132,-90 / RED 11,132,-90), START = reset heading (robot facing away from you)");
-        telemetryData.addData("Alliance", alliance);
+        telemetryData.addData("Controls", "LB intake, RB transfer, Y reverse, A shooter, DPAD U/D flower up/down, DPAD L = reset pose, START = reset heading (robot facing away from you)");
         telemetryData.addData("Pose", follower.pose());
         telemetryData.addData("Intake state", intake.getState());
         telemetryData.addData("Flower state", flower.getState());

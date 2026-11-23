@@ -84,7 +84,7 @@ public class CellLocatorTest {
     @Test
     public void observationReportsBearingDistanceAndTagIds() {
         TurretHistory.Sample at = new TurretHistory.Sample(1.23, 0, 0, 0, 0);
-        CellObservation obs = CellLocator.locate(HiveCells.Cell.BLUE_FAR, row(30, 30, 0.3, 0, 1, 2, 3), at, 0, 0);
+        CellObservation obs = CellLocator.locate(HiveCells.Cell.BOTTOM, row(30, 30, 0.3, 0, 1, 2, 3), at, 0, 0);
         assertEquals(Math.toRadians(45), obs.bearing, EPS);
         assertEquals(Math.hypot(30, 30), obs.distance, EPS);
         assertEquals(4, obs.tagCount());
@@ -95,8 +95,8 @@ public class CellLocatorTest {
     @Test
     public void oneTagUsesCellHeadingForRowDirection() {
         TurretHistory.Sample at = new TurretHistory.Sample(0, 0, 0, 0, 0);
-        double yaw = HiveCells.Cell.BLUE_FAR.pose.heading();
-        CellObservation obs = CellLocator.locate(HiveCells.Cell.BLUE_FAR, row(30, 5, yaw, 3), at, 0, 0);
+        double yaw = HiveCells.Cell.BOTTOM.pose.heading();
+        CellObservation obs = CellLocator.locate(HiveCells.Cell.BOTTOM, row(30, 5, yaw, 3), at, 0, 0);
         assertEquals(30, obs.forward, EPS);
         assertEquals(5, obs.left, EPS);
     }

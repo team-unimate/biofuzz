@@ -14,7 +14,6 @@ import com.seattlesolvers.solverslib.util.InterpLUT;
 import com.seattlesolvers.solverslib.util.TelemetryData;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.HiveCells;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
@@ -38,7 +37,6 @@ public class TurretMotor extends SubsystemBase {
 
     private Pose botPose = new Pose(0, 0, 0);
     private Pose virtualPose = new Pose(0, 0, 0);
-    private Field.Alliance alliance = null;
     private HiveCells.Cell cell = null;
 
     private State state = State.IDLE;
@@ -95,14 +93,6 @@ public class TurretMotor extends SubsystemBase {
             timeOfFlightTable.add(TOF_DIST_IN[i], TOF_S[i]);
         }
         timeOfFlightTable.createLUT();
-    }
-
-    public void setAlliance(Field.Alliance alliance) {
-        if (alliance != this.alliance) {
-            bias = 0;
-            lastSeenTime = Double.NaN;
-        }
-        this.alliance = alliance;
     }
 
     public void setState(State state) {
@@ -182,7 +172,7 @@ public class TurretMotor extends SubsystemBase {
     private void updateAim(double now) {
         double dt = Double.isNaN(previousAimTime) ? 0 : now - previousAimTime;
         previousAimTime = now;
-        HiveCells.Cell nextCell = alliance == null ? null : HiveCells.forRobot(alliance, botPose);
+        HiveCells.Cell nextCell = HiveCells.forRobot(botPose);
         if (nextCell != cell) {
             cell = nextCell;
             bias = 0;

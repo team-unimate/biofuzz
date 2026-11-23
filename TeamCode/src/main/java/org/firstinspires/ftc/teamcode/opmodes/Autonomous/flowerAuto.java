@@ -24,7 +24,6 @@ import org.firstinspires.ftc.teamcode.commands.IntakeFlower.IntakeFlowerUp;
 import org.firstinspires.ftc.teamcode.commands.TransferSequence;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.gate.Gate;
 import org.firstinspires.ftc.teamcode.subsystems.indicator.Indicator;
@@ -52,14 +51,13 @@ public class flowerAuto extends CommandOpMode {
     private TurretMotor turret;
     private Limelight limelight;
     private TelemetryData telemetryData;
-    private Field.Alliance alliance;
 
     private Pose start;
     private Pose startToFlower;
     private Pose flowerToShoot;
 
-    private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = Field.poses(alliance);
+    private void buildPoses() {
+        PoseFactory poseFactory = PoseFactory.degrees();
         start = poseFactory.of(133.0491, 133.3243, -90);
         startToFlower = poseFactory.of(130.9418, 101.4684, 320);
         flowerToShoot = poseFactory.of(95.3135, 129.9457, -38.6349);
@@ -102,18 +100,14 @@ public class flowerAuto extends CommandOpMode {
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         telemetryData = new TelemetryData(telemetry);
 
-        alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
     }
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
         if (gamepad1.y) turret.zeroHere();
 
         turret.readEncoder();
-        telemetryData.addData("Controls", "X = BLUE, B = RED, Y = zero turret here (point it forward)");
-        telemetryData.addData("Alliance", alliance);
+        telemetryData.addData("Controls", "Y = zero turret here (point it forward)");
         telemetryData.addData("Turret deg", Math.toDegrees(turret.getAngle()));
         telemetryData.addData("Encoder fault", turret.isEncoderFault());
         telemetryData.update();
@@ -121,12 +115,10 @@ public class flowerAuto extends CommandOpMode {
 
     @Override
     public void preRun() {
-        buildPoses(alliance);
+        buildPoses();
         follower.setPose(start);
         follower.update();
-        PosePersistency.saveAlliance(alliance);
         PosePersistency.savePose(start);
-        turret.setAlliance(alliance);
         turret.setState(TurretMotor.State.AIM);
         shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
         shooter.setState(Shooter.State.FIXED);
@@ -139,7 +131,6 @@ public class flowerAuto extends CommandOpMode {
         follower.update();
         PosePersistency.savePose(follower.pose());
 
-        telemetryData.addData("Alliance", alliance);
         telemetryData.addData("Pose", follower.pose());
         telemetryData.addData("Intake state", intake.getState());
         telemetryData.addData("Flower state", flower.getState());
