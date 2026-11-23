@@ -21,7 +21,6 @@ import org.firstinspires.ftc.teamcode.commands.IntakeFlower.IntakeFlowerDown;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeShooting;
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.intakeFlower.IntakeFlower;
@@ -40,7 +39,6 @@ public class autoPath extends CommandOpMode {
     private IntakeFlower intakeFlower;
     private TurretMotor turret;
     private Shooter shooter;
-    private Field.Alliance alliance;
     private Pose start;
     private Pose initGardenStart;
     private Pose initGarden;
@@ -52,8 +50,8 @@ public class autoPath extends CommandOpMode {
     private Pose hive2ToParkingStart;
     private Pose hive2ToParking;
 
-    private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = Field.poses(alliance);
+    private void buildPoses() {
+        PoseFactory poseFactory = PoseFactory.degrees();
         start = poseFactory.of(86.7, 133.8, 0);
         initGardenStart = poseFactory.of(86.7    , 133.8594, 0);
         initGarden = poseFactory.of(134.4499, 134.1784, 0);
@@ -119,17 +117,13 @@ public class autoPath extends CommandOpMode {
         intake = new Intake(hardwareMap);
         intakeFlower = new IntakeFlower(hardwareMap, intake);
         register(limelight, turret, shooter);
-        alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
     }
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
         if (gamepad1.y) turret.zeroHere();
-        telemetry.addData("Controls", "X = BLUE, B = RED, Y = ZERO HERE TURRET (point it forward)");
+        telemetry.addData("Controls", "Y = ZERO HERE TURRET (point it forward)");
         telemetry.addData("Turret angle deg (point it forward)", Math.toDegrees(turret.getAngle()));
-        telemetry.addData("Alliance", alliance);
         if (follower.currentPath() != null) {
             telemetry.addData("Current path distance remaining", follower.distanceToEndpoint());
             telemetry.addData("Path number", follower.pathIndex());
@@ -139,11 +133,9 @@ public class autoPath extends CommandOpMode {
 
     @Override
     public void preRun() {
-        buildPoses(alliance);
+        buildPoses();
         follower.setPose(start);
         follower.update();
-        PosePersistency.saveAlliance(alliance);
-        turret.setAlliance(alliance);
         turret.setState(TurretMotor.State.AIM);
         shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
         shooter.setState(Shooter.State.FIXED);

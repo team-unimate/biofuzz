@@ -12,7 +12,6 @@ import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.util.TelemetryData;
 
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMath;
 import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
@@ -37,7 +36,6 @@ public class VisionTuningTeleOp extends CommandOpMode {
     private Limelight limelight;
     private TelemetryData telemetryData;
 
-    private Field.Alliance alliance = Field.Alliance.BLUE;
 
     @Override
     public void initialize() {
@@ -61,12 +59,9 @@ public class VisionTuningTeleOp extends CommandOpMode {
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
 
         turret.readEncoder();
         telemetryData.addData("Controls", "X = BLUE, B = RED. Point the turret forward, then press start");
-        telemetryData.addData("Alliance", alliance);
         telemetryData.addData("Turret angle deg", Math.toDegrees(turret.getAngle()));
         telemetryData.update();
     }
@@ -74,7 +69,6 @@ public class VisionTuningTeleOp extends CommandOpMode {
     @Override
     public void preRun() {
         follower.setPose(new Pose(START_X_IN, START_Y_IN, Math.toRadians(START_HEADING_DEG)));
-        turret.setAlliance(alliance);
     }
 
     @Override
@@ -83,7 +77,7 @@ public class VisionTuningTeleOp extends CommandOpMode {
                 gamepad1.left_stick_y,
                 gamepad1.left_stick_x,
                 -gamepad1.right_stick_x,
-                follower.pose().heading() + (alliance == Field.Alliance.RED ? Math.PI : 0)
+                follower.pose().heading()
         ));
         follower.update();
         Pose pose = follower.pose();

@@ -11,7 +11,6 @@ import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.util.Range;
 import com.seattlesolvers.solverslib.util.InterpLUT;
 
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.HiveCells;
 import org.firstinspires.ftc.teamcode.vision.CellObservation;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
@@ -20,7 +19,6 @@ public class TurretAim {
     private final Limelight vision;
     private final InterpLUT timeOfFlightTable = new InterpLUT();
 
-    private Field.Alliance alliance = null;
     private HiveCells.Cell cell = null;
 
     private double poseTime = Double.NaN;
@@ -48,18 +46,9 @@ public class TurretAim {
         timeOfFlightTable.createLUT();
     }
 
-    public void setAlliance(Field.Alliance alliance) {
-        if (alliance != this.alliance) forgetVision();
-        this.alliance = alliance;
-    }
-
     public void update(Pose robot, double now, double dt) {
         updateRobotVelocity(robot, now);
         updateCell(robot);
-        if (cell == null) {
-            clearTarget();
-            return;
-        }
 
         double cellX = cell.pose.x();
         double cellY = cell.pose.y();
@@ -96,10 +85,11 @@ public class TurretAim {
     }
 
     private void updateCell(Pose robot) {
-        HiveCells.Cell nextCell = alliance == null ? null : HiveCells.forRobot(alliance, robot);
+        HiveCells.Cell nextCell = HiveCells.forRobot(robot);
         if (nextCell == cell) return;
         cell = nextCell;
-        forgetVision();
+        bias = 0;
+        lastSeenTime = Double.NaN;
         previousTarget = Double.NaN;
         targetRate = 0;
     }
@@ -127,27 +117,8 @@ public class TurretAim {
         previousTarget = target;
     }
 
-    private void forgetVision() {
-        bias = 0;
-        lastSeenTime = Double.NaN;
-    }
-
-    private void clearTarget() {
-        previousTarget = Double.NaN;
-        targetRate = 0;
-        target = 0;
-        distance = Double.NaN;
-        seen = false;
-        leadTime = 0;
-    }
-
-    public boolean hasCell() {
-        return cell != null;
-    }
-
     public boolean hasGoodShot() {
-        return cell != null
-                && !isTooClose() && distance <= MAX_SHOT_DIST && !isTooFast()
+        return !isTooClose() && distance <= MAX_SHOT_DIST && !isTooFast()
                 && (seen || ALLOW_ODOMETRY_ONLY_SHOTS);
     }
 

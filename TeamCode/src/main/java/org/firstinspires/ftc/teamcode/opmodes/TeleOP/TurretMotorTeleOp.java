@@ -18,7 +18,7 @@ import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeReverse;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeToShooter;
-import org.firstinspires.ftc.teamcode.field.Field;
+import com.pedropathing.api.PoseFactory;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.Shooter;
@@ -45,7 +45,6 @@ public class TurretMotorTeleOp extends CommandOpMode {
     private GamepadEx driver;
     private TelemetryData telemetryData;
 
-    private Field.Alliance alliance;
     private boolean useSavedPose;
     private boolean shooterOn = false;
 
@@ -66,7 +65,6 @@ public class TurretMotorTeleOp extends CommandOpMode {
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         telemetryData = new TelemetryData(telemetry);
 
-        alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
         useSavedPose = PosePersistency.hasPose();
 
         driver.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).whenPressed(() -> {
@@ -80,8 +78,7 @@ public class TurretMotorTeleOp extends CommandOpMode {
                 TurretMotorConstants.MOTOR_USE_MANUAL_ANGLE = !TurretMotorConstants.MOTOR_USE_MANUAL_ANGLE);
         driver.getGamepadButton(GamepadKeys.Button.DPAD_UP).whenPressed(() -> stepManualAngle(1));
         driver.getGamepadButton(GamepadKeys.Button.DPAD_DOWN).whenPressed(() -> stepManualAngle(-1));
-        driver.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(new ResetPose(follower, Field.Alliance.RED));
-        driver.getGamepadButton(GamepadKeys.Button.DPAD_RIGHT).whenPressed(new ResetPose(follower, Field.Alliance.BLUE));
+        driver.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(new ResetPose(follower));
         driver.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenActive(new intakeOn(intake));
         driver.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenInactive(new intakeOff(intake));
         driver.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).whenActive(new intakeToShooter(intake));
@@ -92,16 +89,13 @@ public class TurretMotorTeleOp extends CommandOpMode {
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
         if (gamepad1.y) {
             useSavedPose = false;
             turret.zeroHere();
         }
 
         turret.readEncoder();
-        telemetryData.addData("Controls", "X = BLUE, B = RED, Y = ignore saved pose and zero turret here");
-        telemetryData.addData("Alliance", alliance);
+        telemetryData.addData("Controls", "Y = ignore saved pose and zero turret here");
         telemetryData.addData("Start pose", useSavedPose ? "saved " + PosePersistency.getPose(null) : "dashboard START_*");
         telemetryData.addData("Turret deg", Math.toDegrees(turret.getAngle()));
         telemetryData.addData("Turret ticks", turret.getTicks());
@@ -111,10 +105,8 @@ public class TurretMotorTeleOp extends CommandOpMode {
 
     @Override
     public void preRun() {
-        Pose start = Field.poses(alliance).of(START_X_IN, START_Y_IN, START_HEADING_DEG);
+        Pose start = PoseFactory.degrees().of(START_X_IN, START_Y_IN, START_HEADING_DEG);
         follower.setPose(useSavedPose ? PosePersistency.getPose(start) : start);
-        turret.setAlliance(alliance);
-        PosePersistency.saveAlliance(alliance);
         turret.setState(TurretMotor.State.AIM);
     }
 
@@ -124,7 +116,7 @@ public class TurretMotorTeleOp extends CommandOpMode {
                 gamepad1.left_stick_y,
                 gamepad1.left_stick_x,
                 -gamepad1.right_stick_x,
-                follower.pose().heading() + (alliance == Field.Alliance.RED ? Math.PI : 0)
+                follower.pose().heading()
         ));
         follower.update();
 
@@ -140,7 +132,7 @@ public class TurretMotorTeleOp extends CommandOpMode {
 
         StringBuilder ids = new StringBuilder();
         for (CellLocator.TagPoint tag : limelight.getTagPoints()) ids.append(tag.id).append(' ');
-        telemetryData.addData("Controls", "RB shooter, A shoot, B aim/idle, Y manual angle on/off, DPAD U/D angle +/-, DPAD L/R reset pose");
+        telemetryData.addData("Controls", "RB shooter, A shoot, B aim/idle, Y manual angle on/off, DPAD U/D angle +/-, DPAD L reset pose");
         telemetryData.addData("Manual angle", TurretMotorConstants.MOTOR_USE_MANUAL_ANGLE
                 ? TurretMotorConstants.MOTOR_MANUAL_ANGLE_DEG + " deg" : "off (auto aim)");
         turret.addTelemetry(telemetryData);

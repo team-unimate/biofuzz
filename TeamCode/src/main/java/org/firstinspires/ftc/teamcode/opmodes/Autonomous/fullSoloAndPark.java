@@ -22,7 +22,6 @@ import org.firstinspires.ftc.teamcode.commands.TransferSequence;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeShooting;
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.gate.Gate;
 import org.firstinspires.ftc.teamcode.subsystems.indicator.Indicator;
@@ -50,7 +49,6 @@ public class fullSoloAndPark extends CommandOpMode {
     private TurretMotor turret;
     private Limelight limelight;
     private TelemetryData telemetryData;
-    private Field.Alliance alliance = Field.Alliance.BLUE;
 
     private  Pose start;
     private  Pose initToGarden;
@@ -68,7 +66,7 @@ public class fullSoloAndPark extends CommandOpMode {
     private  Pose shootToPark;
 
     private void buildPoses() {
-        PoseFactory poseFactory = Field.poses(alliance);
+        PoseFactory poseFactory = PoseFactory.degrees();
         start = poseFactory.of(86.7, 133.8, 0);
         initToGarden = poseFactory.of(132.9873, 133.1039, 0.1951);
         gardenAdjustAngleStart = poseFactory.of(132.9873, 133.1039, 0);
@@ -130,12 +128,9 @@ public class fullSoloAndPark extends CommandOpMode {
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
         if (gamepad1.y) turret.zeroHere();
-        telemetry.addData("Controls", "X = BLUE, B = RED, Y = ZERO HERE TURRET (point it forward)");
+        telemetry.addData("Controls", "Y = ZERO HERE TURRET (point it forward)");
         telemetry.addData("Turret angle deg (point it forward)", Math.toDegrees(turret.getAngle()));
-        telemetry.addData("Alliance", alliance);
         telemetry.update();
     }
 
@@ -144,9 +139,7 @@ public class fullSoloAndPark extends CommandOpMode {
         buildPoses();
         follower.setPose(start);
         follower.update();
-        PosePersistency.saveAlliance(alliance);
         PosePersistency.savePose(start);
-        turret.setAlliance(alliance);
         turret.setState(TurretMotor.State.AIM);
         shooter.setState(Shooter.State.DISTANCE);
         schedule(autoRoutine());
@@ -158,7 +151,6 @@ public class fullSoloAndPark extends CommandOpMode {
         follower.update();
         PosePersistency.savePose(follower.pose());
 
-        telemetry.addData("Alliance", alliance);
         telemetry.addData("x", follower.pose().x());
         telemetry.addData("y", follower.pose().y());
         telemetry.addData("heading", follower.pose().heading());

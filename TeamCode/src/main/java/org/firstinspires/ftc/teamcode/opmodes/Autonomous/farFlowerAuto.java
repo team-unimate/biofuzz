@@ -23,7 +23,6 @@ import org.firstinspires.ftc.teamcode.commands.IntakeFlower.IntakeFlowerUp;
 import org.firstinspires.ftc.teamcode.commands.TransferSequence;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.gate.Gate;
 import org.firstinspires.ftc.teamcode.subsystems.indicator.Indicator;
@@ -53,7 +52,6 @@ public class farFlowerAuto extends CommandOpMode {
     private TurretMotor turret;
     private Limelight limelight;
     private TelemetryData telemetryData;
-    private Field.Alliance alliance = Field.Alliance.BLUE;
 
     private long shootDelayMs = 0;
     private boolean lastUp = false;
@@ -64,7 +62,7 @@ public class farFlowerAuto extends CommandOpMode {
     private Pose startToFlowerControl1;
 
     private void buildPoses() {
-        PoseFactory poseFactory = Field.poses(alliance);
+        PoseFactory poseFactory = PoseFactory.degrees();
         start = poseFactory.of(79.3306, 8.3926, 90);
         startToFlower = poseFactory.of(132.1767, 27.5797, 320);
         startToFlowerControl1 = poseFactory.of(92.5399, 38.9554, 0);
@@ -100,13 +98,10 @@ public class farFlowerAuto extends CommandOpMode {
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         telemetryData = new TelemetryData(telemetry);
 
-        alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
     }
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
         if (gamepad1.y) turret.zeroHere();
 
         if (gamepad1.dpad_up && !lastUp) shootDelayMs = Math.min(shootDelayMs + DELAY_STEP_MS, MAX_DELAY_MS);
@@ -116,8 +111,7 @@ public class farFlowerAuto extends CommandOpMode {
 
         buildPoses();
         turret.readEncoder();
-        telemetryData.addData("Controls", "X = BLUE, B = RED, Y = zero turret here (point it forward), DPAD U/D = shoot delay +/- " + DELAY_STEP_MS + " ms");
-        telemetryData.addData("Alliance", alliance);
+        telemetryData.addData("Controls", "Y = zero turret here (point it forward), DPAD U/D = shoot delay +/- " + DELAY_STEP_MS + " ms");
         telemetryData.addData("Start pose", String.format("x=%.1f y=%.1f h=%.0f deg", start.x(), start.y(), Math.toDegrees(start.heading())));
         telemetryData.addData("First shot delay s", shootDelayMs / 1000.0);
         telemetryData.addData("Turret deg", Math.toDegrees(turret.getAngle()));
@@ -130,9 +124,7 @@ public class farFlowerAuto extends CommandOpMode {
         buildPoses();
         follower.setPose(start);
         follower.update();
-        PosePersistency.saveAlliance(alliance);
         PosePersistency.savePose(start);
-        turret.setAlliance(alliance);
         turret.setState(TurretMotor.State.AIM);
         shooter.setState(Shooter.State.DISTANCE);
         schedule(autoRoutine());
@@ -144,7 +136,6 @@ public class farFlowerAuto extends CommandOpMode {
         follower.update();
         PosePersistency.savePose(follower.pose());
 
-        telemetryData.addData("Alliance", alliance);
         telemetryData.addData("First shot delay s", shootDelayMs / 1000.0);
         telemetryData.addData("Pose", follower.pose());
         telemetryData.addData("Intake state", intake.getState());

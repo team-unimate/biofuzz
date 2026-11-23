@@ -10,7 +10,6 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import com.seattlesolvers.solverslib.util.TelemetryData;
 
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.HiveCells;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
@@ -54,10 +53,6 @@ public class TurretMotor extends SubsystemBase {
         motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         zeroTicks = PosePersistency.getTurretMotorZero(motor.getCurrentPosition());
         PosePersistency.saveTurretMotorZero(zeroTicks);
-    }
-
-    public void setAlliance(Field.Alliance alliance) {
-        aim.setAlliance(alliance);
     }
 
     public void setState(State state) {
@@ -116,8 +111,7 @@ public class TurretMotor extends SubsystemBase {
     }
 
     private State nextState() {
-        boolean canAim = aim.hasCell() && TurretController.isWithinLimits(aim.getTarget());
-        if (requestedState == State.AIM && !canAim) return State.IDLE;
+        if (requestedState == State.AIM && !TurretController.isWithinLimits(aim.getTarget())) return State.IDLE;
         return requestedState;
     }
 
@@ -223,12 +217,12 @@ public class TurretMotor extends SubsystemBase {
     }
 
     public void addTelemetry(TelemetryData telemetry) {
-        telemetry.addData("Turret state", recovering ? state + " (recovering)" : state);
+        telemetry.addData("Turret state", state);
         telemetry.addData("Turret requested state", requestedState);
         telemetry.addData("Turret aimed", isAimed());
         telemetry.addData("Robot speed in/s", aim.getRobotSpeed());
         telemetry.addData("Lead time s", aim.getLeadTime());
-        telemetry.addData("Turret cell", aim.hasCell() ? aim.getCell() : "none");
+        telemetry.addData("Turret cell", aim.getCell());
         telemetry.addData("Turret tags seen", aim.isSeen());
         telemetry.addData("Turret in range", inRange);
         telemetry.addData("Turret settled", isSettled());
@@ -236,11 +230,8 @@ public class TurretMotor extends SubsystemBase {
         telemetry.addData("Turret aim offset deg", AIM_OFFSET_DEG);
         telemetry.addData("Turret target deg", Math.toDegrees(aim.getTarget()));
         telemetry.addData("Turret angle deg", Math.toDegrees(angle));
-        telemetry.addData("Turret velocity deg/s", Math.toDegrees(velocity));
         telemetry.addData("Turret error deg", Math.toDegrees(setpoint - angle));
         telemetry.addData("Turret target rate deg/s", Math.toDegrees(aim.getTargetRate()));
-        telemetry.addData("Turret feedforward", controller.getFeedforward());
-        telemetry.addData("Turret integral power", controller.getIntegralPower());
         telemetry.addData("Turret power", power);
         telemetry.addData("Turret encoder ticks", ticks);
         telemetry.addData("Turret encoder fault", encoderFault);

@@ -158,10 +158,8 @@ public class OdometryDriftTest extends LinearOpMode {
 
         c.setStrokeWidth(1);
         c.setStroke("#888888");
-        drawMarker(c, Field.RED_CELL_TOP);
-        drawMarker(c, Field.RED_CELL_BOTTOM);
-        drawMarker(c, Field.BLUE_CELL_TOP);
-        drawMarker(c, Field.BLUE_CELL_BOTTOM);
+        drawMarker(c, Field.CELL_TOP);
+        drawMarker(c, Field.CELL_BOTTOM);
 
         if (trail.size() > 1) {
             double[] xs = new double[trail.size()];

@@ -16,10 +16,8 @@ public class TurretAimTest {
     private static final double EPS = 0.0001;
     private static final Pose START = new Pose(Field.CENTER_X, Field.CENTER_Y + 1, 0);
 
-    private static TurretAim blueAim() {
-        TurretAim aim = new TurretAim(null);
-        aim.setAlliance(Field.Alliance.BLUE);
-        return aim;
+    private static TurretAim newAim() {
+        return new TurretAim(null);
     }
 
     private static double odomTarget(Pose robot, HiveCells.Cell cell) {
@@ -33,20 +31,28 @@ public class TurretAimTest {
     }
 
     @Test
-    public void noAllianceMeansNoTarget() {
-        TurretAim aim = new TurretAim(null);
-        aim.update(START, 0, 0);
+    public void nothingToShootBeforeTheFirstUpdate() {
+        TurretAim aim = newAim();
         assertNull(aim.getCell());
-        assertEquals(0, aim.getTarget(), EPS);
         assertTrue(Double.isNaN(aim.getDistance()));
         assertFalse(aim.hasGoodShot());
     }
 
     @Test
-    public void stationaryRobotAimsStraightAtTheCell() {
-        TurretAim aim = blueAim();
+    public void switchesCellWhenCrossingTheMiddle() {
+        TurretAim aim = newAim();
         aim.update(START, 0, 0);
-        HiveCells.Cell cell = HiveCells.Cell.BLUE_AUDIENCE;
+        assertEquals(HiveCells.Cell.TOP, aim.getCell());
+        aim.update(new Pose(START.x(), Field.CENTER_Y - 1, 0), 0.1, 0.1);
+        assertEquals(HiveCells.Cell.BOTTOM, aim.getCell());
+        assertEquals(0, aim.getTargetRate(), EPS);
+    }
+
+    @Test
+    public void stationaryRobotAimsStraightAtTheCell() {
+        TurretAim aim = newAim();
+        aim.update(START, 0, 0);
+        HiveCells.Cell cell = HiveCells.Cell.TOP;
         assertEquals(cell, aim.getCell());
         assertEquals(odomTarget(START, cell), aim.getTarget(), EPS);
         assertEquals(odomDistance(START, cell), aim.getDistance(), EPS);
@@ -55,7 +61,7 @@ public class TurretAimTest {
 
     @Test
     public void targetRateFollowsRobotRotation() {
-        TurretAim aim = blueAim();
+        TurretAim aim = newAim();
         Pose turned = new Pose(START.x(), START.y(), Math.toRadians(10));
         aim.update(START, 0, 0);
         aim.update(turned, 0.1, 0.1);
@@ -65,7 +71,7 @@ public class TurretAimTest {
 
     @Test
     public void drivingFastBlocksTheShot() {
-        TurretAim aim = blueAim();
+        TurretAim aim = newAim();
         aim.update(START, 0, 0);
         aim.update(new Pose(START.x() + 11, START.y(), 0), 0.1, 0.1);
         assertTrue(aim.isTooFast());
@@ -74,7 +80,7 @@ public class TurretAimTest {
 
     @Test
     public void impossibleSpeedJumpsAreIgnored() {
-        TurretAim aim = blueAim();
+        TurretAim aim = newAim();
         aim.update(START, 0, 0);
         aim.update(new Pose(START.x() + 50, START.y(), 0), 0.1, 0.1);
         assertEquals(0, aim.getRobotSpeed(), EPS);
