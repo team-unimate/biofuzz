@@ -12,7 +12,7 @@ public class TurretMotorConstants {
     public static double MOTOR_TURRET_FWD = -1;
     public static double MOTOR_TURRET_LEFT = 0;
 
-    public static double MOTOR_SANITY_MARGIN_DEG = 5;
+    public static double MOTOR_SANITY_MARGIN_DEG = 2;
     public static double MOTOR_MIN_ANGLE_DEG = -175;
     public static double MOTOR_MAX_ANGLE_DEG = 175;
 

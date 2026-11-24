@@ -80,7 +80,7 @@ public class fullSoloAndPark extends CommandOpMode {
         hive1ToHive2Control1 = poseFactory.of(106.1536, 95.1607, 0);
         hive2ToShootStart = poseFactory.of(127.9237, 94.8496, 0);
         hive2ToShoot = poseFactory.of(109.1074, 108.5861, -75);
-        shootToPark = poseFactory.of(120.2001, 20.8667, -72.8749);
+        shootToPark = poseFactory.of(132, 20.8667, -72.8749);
     }
     public Command autoRoutine() {
         return new SequentialCommandGroup(

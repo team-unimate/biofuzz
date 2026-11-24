@@ -55,7 +55,7 @@ public class FullTestTeleOp extends CommandOpMode {
     private TelemetryData telemetryData;
 
     private boolean useSavedPose;
-    private boolean shooterOn = false;
+    private boolean shooterOn = true;
 
     @Override
     public void initialize() {
@@ -86,12 +86,11 @@ public class FullTestTeleOp extends CommandOpMode {
         driver.getGamepadButton(GamepadKeys.Button.Y).whenActive(new intakeReverse(intake));
         driver.getGamepadButton(GamepadKeys.Button.Y).whenInactive(new intakeOff(intake));
 
-        driver.getGamepadButton(GamepadKeys.Button.A).whenPressed(() -> shooterOn = !shooterOn);
+        driver.getGamepadButton(GamepadKeys.Button.A).whenPressed(new ResetPose(follower));
 
         driver.getGamepadButton(GamepadKeys.Button.DPAD_UP).whenPressed(new IntakeFlowerUp(flower));
         driver.getGamepadButton(GamepadKeys.Button.DPAD_DOWN).whenPressed(new IntakeFlowerDown(flower));
 
-        driver.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(new ResetPose(follower));
         driver.getGamepadButton(GamepadKeys.Button.START).whenPressed(
                 new ResetHeading(follower, () -> 0));
     }
@@ -117,14 +116,12 @@ public class FullTestTeleOp extends CommandOpMode {
     @Override
     public void run() {
         follower.manual(ManualDrive.fieldCentric(
-                -gamepad1.left_stick_y,
-                -gamepad1.left_stick_x,
+                gamepad1.left_stick_y,
+                gamepad1.left_stick_x,
                 -gamepad1.right_stick_x,
                 follower.pose().heading()
         ));
         follower.update();
-
-        shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
         shooter.setState(shooterOn ? Shooter.State.DISTANCE : Shooter.State.OFF);
 
         super.run();
