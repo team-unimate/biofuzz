@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.opmodes.Autonomous;
 import static org.firstinspires.ftc.teamcode.opmodes.Autonomous.testMatch.AIM_TIMEOUT_MS;
 
 import com.pedropathing.api.Paths;
+
 import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
@@ -20,14 +21,13 @@ import org.firstinspires.ftc.teamcode.commands.IntakeFlower.IntakeFlowerDown;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOff;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeOn;
 import org.firstinspires.ftc.teamcode.commands.intake.intakeShooting;
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.intakeFlower.IntakeFlower;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.Shooter;
 import org.firstinspires.ftc.teamcode.subsystems.shooter.ShooterConstants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
 
@@ -37,9 +37,8 @@ public class autoPath extends CommandOpMode {
     private Follower follower;
     private Intake intake;
     private IntakeFlower intakeFlower;
-    private Turret turret;
+    private TurretMotor turret;
     private Shooter shooter;
-    private Field.Alliance alliance;
     private Pose start;
     private Pose initGarden;
     private Path shoot1ToHive1Path;
@@ -47,8 +46,8 @@ public class autoPath extends CommandOpMode {
     private Pose shoot2ToHive2;
     private Pose hive2ToParking;
 
-    void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = Field.blueRoutePoses(alliance);
+    void buildPoses() {
+        PoseFactory poseFactory = PoseFactory.degrees();
         start = poseFactory.of(86.7, 133.8, 0);
         initGarden = poseFactory.of(134.4499, 134.1784, 0);
         Pose shoot1 = poseFactory.of(97.9289, 23.6729, 0);
@@ -108,22 +107,18 @@ public class autoPath extends CommandOpMode {
         follower = Constants.createFollower(hardwareMap);
         TurretHistory history = new TurretHistory();
         Limelight limelight = new Limelight(hardwareMap, history);
-        turret = new Turret(hardwareMap, limelight, history, follower::pose);
+        turret = new TurretMotor(hardwareMap, limelight, history, follower::pose);
         shooter = new Shooter(hardwareMap, turret::getDistance);
         intake = new Intake(hardwareMap);
-        intakeFlower = new IntakeFlower(hardwareMap);
+        intakeFlower = new IntakeFlower(hardwareMap, intake);
         register(limelight, turret, shooter, intakeFlower);
-        alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
     }
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
         if (gamepad1.y) turret.zeroHere();
-        telemetry.addData("Controls", "X = BLUE, B = RED, Y = ZERO HERE TURRET (point it forward)");
+        telemetry.addData("Controls", "Y = ZERO HERE TURRET (point it forward)");
         telemetry.addData("Turret angle deg (point it forward)", Math.toDegrees(turret.getAngle()));
-        telemetry.addData("Alliance", alliance);
         if (follower.currentPath() != null) {
             telemetry.addData("Current path distance remaining", follower.distanceToEndpoint());
             telemetry.addData("Path number", follower.pathIndex());
@@ -133,12 +128,10 @@ public class autoPath extends CommandOpMode {
 
     @Override
     public void preRun() {
-        buildPoses(alliance);
+        buildPoses();
         follower.setPose(start);
         follower.update();
-        PosePersistency.saveAlliance(alliance);
-        turret.setAlliance(alliance);
-        turret.setState(Turret.State.AIM);
+        turret.setState(TurretMotor.State.AIM);
         shooter.setTargetRPM(ShooterConstants.TUNING_RPM);
         shooter.setState(Shooter.State.FIXED);
         schedule(autoRoutine());

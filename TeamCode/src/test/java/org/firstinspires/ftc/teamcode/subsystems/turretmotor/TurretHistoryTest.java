@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.subsystems.turret;
+package org.firstinspires.ftc.teamcode.subsystems.turretmotor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -30,7 +30,7 @@ public class TurretHistoryTest {
         TurretHistory h = new TurretHistory();
         h.add(0.0, 0, 0, 0, Math.PI - 0.1);
         h.add(0.1, 0, 0, 0, -Math.PI + 0.1);
-        assertEquals(Math.PI, Math.abs(Turret.wrap(h.at(0.05).heading)), EPS);
+        assertEquals(Math.PI, Math.abs(TurretMath.wrap(h.at(0.05).heading)), EPS);
     }
 
     @Test

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.subsystems.turret;
+package org.firstinspires.ftc.teamcode.subsystems.turretmotor;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -13,22 +13,22 @@ public class StallTest {
 
     @Test
     public void pushingHardAndNotMovingIsStall() {
-        assertTrue(Turret.isPushingWithoutMoving(0.8, FAR, STOPPED));
-        assertTrue(Turret.isPushingWithoutMoving(-0.8, -FAR, STOPPED));
+        assertTrue(TurretController.isPushingWithoutMoving(0.8, FAR, STOPPED));
+        assertTrue(TurretController.isPushingWithoutMoving(-0.8, -FAR, STOPPED));
     }
 
     @Test
     public void movingIsNotStall() {
-        assertFalse(Turret.isPushingWithoutMoving(0.8, FAR, MOVING));
+        assertFalse(TurretController.isPushingWithoutMoving(0.8, FAR, MOVING));
     }
 
     @Test
     public void lowPowerIsNotStall() {
-        assertFalse(Turret.isPushingWithoutMoving(0.1, FAR, STOPPED));
+        assertFalse(TurretController.isPushingWithoutMoving(0.1, FAR, STOPPED));
     }
 
     @Test
     public void onTargetIsNotStall() {
-        assertFalse(Turret.isPushingWithoutMoving(0.8, CLOSE, STOPPED));
+        assertFalse(TurretController.isPushingWithoutMoving(0.8, CLOSE, STOPPED));
     }
 }

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.subsystems.turret;
+package org.firstinspires.ftc.teamcode.subsystems.turretmotor;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -59,7 +59,7 @@ public class TurretHistory {
                         lerp(turretAngles[earlier], turretAngles[later], t),
                         lerp(xs[earlier], xs[later], t),
                         lerp(ys[earlier], ys[later], t),
-                        headings[earlier] + t * Turret.wrap(headings[later] - headings[earlier])
+                        headings[earlier] + t * TurretMath.wrap(headings[later] - headings[earlier])
                 );
             }
             later = earlier;

@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode.vision;
 
 import org.firstinspires.ftc.teamcode.field.HiveCells;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 
 import java.util.List;
 

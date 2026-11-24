@@ -1,41 +1,28 @@
 package org.firstinspires.ftc.teamcode.commands.field;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.util.PosePersistency;
-
-import java.util.function.Supplier;
 
 @Config
 public class ResetPose extends InstantCommand {
-    public static double RED_X_IN = 8;
-    public static double RED_Y_IN = 8;
-    public static double RED_HEADING_DEG = 90;
+    public static double X_IN = 83.4;
+    public static double Y_IN = 8;
+    public static double HEADING_DEG = 90;
 
-    public static double BLUE_X_IN = 133;
-    public static double BLUE_Y_IN = 132;
-    public static double BLUE_HEADING_DEG = -90;
-
-    public ResetPose(Follower follower, Field.Alliance alliance) {
-        this(follower, () -> alliance);
-    }
-
-    public ResetPose(Follower follower, Supplier<Field.Alliance> alliance) {
+    public ResetPose(Follower follower) {
         super(() -> {
-            Pose pose = poseFor(alliance.get());
+            Pose pose = pose();
             follower.setPose(pose);
             PosePersistency.savePose(pose);
         });
     }
 
-    public static Pose poseFor(Field.Alliance alliance) {
-        if (alliance == Field.Alliance.RED) {
-            return new Pose(RED_X_IN, RED_Y_IN, Math.toRadians(RED_HEADING_DEG));
-        }
-        return new Pose(BLUE_X_IN, BLUE_Y_IN, Math.toRadians(BLUE_HEADING_DEG));
+    public static Pose pose() {
+        return PoseFactory.degrees().of(X_IN, Y_IN, HEADING_DEG);
     }
 }

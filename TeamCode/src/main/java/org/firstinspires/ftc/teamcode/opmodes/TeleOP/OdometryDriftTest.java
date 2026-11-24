@@ -13,7 +13,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.FieldImage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMath;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -120,7 +120,7 @@ public class OdometryDriftTest extends LinearOpMode {
     private double[] drift(Pose start) {
         double dx = measured.x() - start.x();
         double dy = measured.y() - start.y();
-        double dh = Math.toDegrees(Turret.wrap(measured.heading() - start.heading()));
+        double dh = Math.toDegrees(TurretMath.wrap(measured.heading() - start.heading()));
         double dist = Math.hypot(dx, dy);
         double per100 = measuredAtDistance > 0 ? dist / measuredAtDistance * 100 : 0;
         return new double[]{dx, dy, dist, dh, per100};
@@ -158,10 +158,8 @@ public class OdometryDriftTest extends LinearOpMode {
 
         c.setStrokeWidth(1);
         c.setStroke("#888888");
-        drawMarker(c, Field.RED_CELL_TOP);
-        drawMarker(c, Field.RED_CELL_BOTTOM);
-        drawMarker(c, Field.BLUE_CELL_TOP);
-        drawMarker(c, Field.BLUE_CELL_BOTTOM);
+        drawMarker(c, Field.CELL_TOP);
+        drawMarker(c, Field.CELL_BOTTOM);
 
         if (trail.size() > 1) {
             double[] xs = new double[trail.size()];

@@ -12,11 +12,11 @@ import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.util.TelemetryData;
 
-import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.Turret;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretConstants;
-import org.firstinspires.ftc.teamcode.subsystems.turret.TurretHistory;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMath;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotor;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretMotorConstants;
+import org.firstinspires.ftc.teamcode.subsystems.turretmotor.TurretHistory;
 import org.firstinspires.ftc.teamcode.vision.CellLocator;
 import org.firstinspires.ftc.teamcode.vision.CellObservation;
 import org.firstinspires.ftc.teamcode.vision.Limelight;
@@ -32,11 +32,10 @@ public class VisionTuningTeleOp extends CommandOpMode {
     public static double START_HEADING_DEG = -90;
 
     private Follower follower;
-    private Turret turret;
+    private TurretMotor turret;
     private Limelight limelight;
     private TelemetryData telemetryData;
 
-    private Field.Alliance alliance = Field.Alliance.BLUE;
 
     @Override
     public void initialize() {
@@ -45,7 +44,7 @@ public class VisionTuningTeleOp extends CommandOpMode {
         follower = Constants.createFollower(hardwareMap);
         TurretHistory history = new TurretHistory();
         limelight = new Limelight(hardwareMap, history);
-        turret = new Turret(hardwareMap, limelight, history, follower::pose);
+        turret = new TurretMotor(hardwareMap, limelight, history, follower::pose);
         register(limelight, turret);
 
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
@@ -55,17 +54,14 @@ public class VisionTuningTeleOp extends CommandOpMode {
         gamepadEx1.getGamepadButton(GamepadKeys.Button.A).whenPressed(
                 () -> VisionTuning.AUTO_AIM = !VisionTuning.AUTO_AIM);
         gamepadEx1.getGamepadButton(GamepadKeys.Button.B).whenPressed(
-                () -> TurretConstants.USE_VISION = !TurretConstants.USE_VISION);
+                () -> TurretMotorConstants.USE_VISION = !TurretMotorConstants.USE_VISION);
     }
 
     @Override
     public void initialize_loop() {
-        if (gamepad1.x) alliance = Field.Alliance.BLUE;
-        if (gamepad1.b) alliance = Field.Alliance.RED;
 
         turret.readEncoder();
         telemetryData.addData("Controls", "X = BLUE, B = RED. Point the turret forward, then press start");
-        telemetryData.addData("Alliance", alliance);
         telemetryData.addData("Turret angle deg", Math.toDegrees(turret.getAngle()));
         telemetryData.update();
     }
@@ -73,7 +69,6 @@ public class VisionTuningTeleOp extends CommandOpMode {
     @Override
     public void preRun() {
         follower.setPose(new Pose(START_X_IN, START_Y_IN, Math.toRadians(START_HEADING_DEG)));
-        turret.setAlliance(alliance);
     }
 
     @Override
@@ -82,12 +77,12 @@ public class VisionTuningTeleOp extends CommandOpMode {
                 gamepad1.left_stick_y,
                 gamepad1.left_stick_x,
                 -gamepad1.right_stick_x,
-                follower.pose().heading() + (alliance == Field.Alliance.RED ? Math.PI : 0)
+                follower.pose().heading()
         ));
         follower.update();
         Pose pose = follower.pose();
         if (VisionTuning.AUTO_AIM) {
-            turret.setState(Turret.State.AIM);
+            turret.setState(TurretMotor.State.AIM);
         } else {
             turret.setManualAngle(Math.toRadians(VisionTuning.TURRET_DEG));
         }
@@ -113,20 +108,20 @@ public class VisionTuningTeleOp extends CommandOpMode {
             return;
         }
 
-        double[] pivot = Turret.pivot(pose.x(), pose.y(), pose.heading(),
-                TurretConstants.TURRET_FWD, TurretConstants.TURRET_LEFT);
-        double odomAngle = Turret.odomAngle(pivot[0], pivot[1], pose.heading(),
+        double[] pivot = TurretMath.pivot(pose.x(), pose.y(), pose.heading(),
+                TurretMotorConstants.MOTOR_TURRET_FWD, TurretMotorConstants.MOTOR_TURRET_LEFT);
+        double odomAngle = TurretMath.odomAngle(pivot[0], pivot[1], pose.heading(),
                 turret.getCell().pose.x(), turret.getCell().pose.y());
         double odomDistance = Math.hypot(turret.getCell().pose.x() - pivot[0], turret.getCell().pose.y() - pivot[1]);
 
         telemetryData.addData("Cell", turret.getCell());
-        telemetryData.addData("Vision correction", TurretConstants.USE_VISION ? "ON" : "OFF");
+        telemetryData.addData("Vision correction", TurretMotorConstants.USE_VISION ? "ON" : "OFF");
         telemetryData.addData("Tags seen (lock)", turret.isSeen());
         telemetryData.addData("Bias deg", Math.toDegrees(turret.getBias()));
         telemetryData.addData("Aim target deg (odom + bias)", Math.toDegrees(turret.getTarget()));
         telemetryData.addData("Aim distance in", turret.getDistance());
-        telemetryData.addData("Aim error deg (target - turret)", Math.toDegrees(Turret.wrap(turret.getTarget() - turret.getAngle())));
-        telemetryData.addData("Aim offset deg", TurretConstants.AIM_OFFSET_DEG);
+        telemetryData.addData("Aim error deg (target - turret)", Math.toDegrees(TurretMath.wrap(turret.getTarget() - turret.getAngle())));
+        telemetryData.addData("Aim offset deg", TurretMotorConstants.AIM_OFFSET_DEG);
         telemetryData.addData("Odom angle deg / distance in",
                 String.format(Locale.US, "%.1f / %.1f", Math.toDegrees(odomAngle), odomDistance));
 
@@ -137,14 +132,14 @@ public class VisionTuningTeleOp extends CommandOpMode {
             return;
         }
 
-        double visionAngle = Turret.visionAngle(obs.turretAngleAtCapture, obs.bearing, pose.heading(), obs.headingAtCapture);
+        double visionAngle = TurretMath.visionAngle(obs.turretAngleAtCapture, obs.bearing, pose.heading(), obs.headingAtCapture);
         telemetryData.addData("Vision tags", obs.tagCount());
         telemetryData.addData("Vision bearing deg (from turret)", Math.toDegrees(obs.bearing));
         telemetryData.addData("Vision angle deg / distance in",
                 String.format(Locale.US, "%.1f / %.1f", Math.toDegrees(visionAngle), obs.distance));
-        double disagree = Math.toDegrees(Turret.wrap(visionAngle - odomAngle));
+        double disagree = Math.toDegrees(TurretMath.wrap(visionAngle - odomAngle));
         telemetryData.addData("Vision - odom angle deg", disagree);
-        telemetryData.addData("Vision accepted", Math.abs(disagree) <= TurretConstants.VISION_MAX_DISAGREE_DEG);
+        telemetryData.addData("Vision accepted", Math.abs(disagree) <= TurretMotorConstants.VISION_MAX_DISAGREE_DEG);
         telemetryData.addData("Vision - odom distance in", obs.distance - odomDistance);
         if (VisionTuning.MEASURED_DISTANCE_IN > 0) {
             telemetryData.addData("Vision - tape distance in", obs.distance - VisionTuning.MEASURED_DISTANCE_IN);
@@ -160,6 +155,6 @@ public class VisionTuningTeleOp extends CommandOpMode {
     @Override
     public void end() {
         VisionTuning.AUTO_AIM = false;
-        TurretConstants.USE_VISION = true;
+        TurretMotorConstants.USE_VISION = true;
     }
 }
