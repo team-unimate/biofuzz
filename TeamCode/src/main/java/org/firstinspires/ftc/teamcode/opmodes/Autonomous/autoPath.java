@@ -40,27 +40,21 @@ public class autoPath extends CommandOpMode {
     private TurretMotor turret;
     private Shooter shooter;
     private Pose start;
-    private Pose initGardenStart;
     private Pose initGarden;
-    private Pose gardenToShoot1;
-    private Pose shoot1ToHive1;
-    private Pose hive1ToShoot2Start;
+    private Path shoot1ToHive1Path;
     private Pose hive1ToShoot2;
     private Pose shoot2ToHive2;
-    private Pose hive2ToParkingStart;
     private Pose hive2ToParking;
 
-    private void buildPoses() {
+    void buildPoses() {
         PoseFactory poseFactory = PoseFactory.degrees();
         start = poseFactory.of(86.7, 133.8, 0);
-        initGardenStart = poseFactory.of(86.7    , 133.8594, 0);
         initGarden = poseFactory.of(134.4499, 134.1784, 0);
-        gardenToShoot1 = poseFactory.of(97.9289, 23.6729, -100);
-        shoot1ToHive1 = poseFactory.of(96.9, 13.0, -100.0781);
-        hive1ToShoot2Start = poseFactory.of(95.9072, 12.2983, -100);
+        Pose shoot1 = poseFactory.of(97.9289, 23.6729, 0);
+        Pose hive1 = poseFactory.of(96.9, 13.0, 0);
+        shoot1ToHive1Path = Paths.line(shoot1, hive1).tangent();
         hive1ToShoot2 = poseFactory.of(100.3939, 31.8151, 30);
-        shoot2ToHive2 = poseFactory.of(127 , 92.6, 10);
-        hive2ToParkingStart = poseFactory.of(128.4241, 92.6001, 0);
+        shoot2ToHive2 = poseFactory.of(127, 92.6, 10);
         hive2ToParking = poseFactory.of(128.988, 51.9602, -90);
     }
 
@@ -75,6 +69,7 @@ public class autoPath extends CommandOpMode {
                 new intakeOn(intake),
                 new FollowPathCommand(follower, initGarden()),
                 new intakeOff(intake),
+                new FollowPathCommand(follower, gardenToShoot1()),
                 new FollowPathCommand(follower, shoot1ToHive1()),
                 new InstantCommand(() -> shooter.setState(Shooter.State.FIXED)),
                 new intakeShooting(intake, shooter),
@@ -116,7 +111,7 @@ public class autoPath extends CommandOpMode {
         shooter = new Shooter(hardwareMap, turret::getDistance);
         intake = new Intake(hardwareMap);
         intakeFlower = new IntakeFlower(hardwareMap, intake);
-        register(limelight, turret, shooter);
+        register(limelight, turret, shooter, intakeFlower);
     }
 
     @Override
@@ -169,19 +164,21 @@ public class autoPath extends CommandOpMode {
         PosePersistency.savePose(follower.pose());
     }
     public Path initGarden() {
-        return Paths.line(initGardenStart, initGarden).linear(initGardenStart, initGarden);
+        return Paths.line(start, initGarden).linear(start, initGarden);
     }
 
     public Path gardenToShoot1() {
-        return Paths.line(initGarden, gardenToShoot1).linear(initGarden, gardenToShoot1);
+        Pose shoot1 = shoot1ToHive1Path.get(0);
+        return Paths.line(initGarden, shoot1).linear(initGarden, shoot1);
     }
 
     public Path shoot1ToHive1() {
-        return Paths.line(gardenToShoot1, shoot1ToHive1).tangent();
+        return shoot1ToHive1Path;
     }
 
     public Path hive1ToShoot2() {
-        return Paths.line(hive1ToShoot2Start, hive1ToShoot2).linear(hive1ToShoot2Start, hive1ToShoot2);
+        Pose hive1 = shoot1ToHive1Path.endPose();
+        return Paths.line(hive1, hive1ToShoot2).linear(hive1, hive1ToShoot2);
     }
 
     public Path shoot2ToHive2() {
@@ -189,6 +186,6 @@ public class autoPath extends CommandOpMode {
     }
 
     public Path hive2ToParking() {
-        return Paths.line(hive2ToParkingStart, hive2ToParking).linear(hive2ToParkingStart, hive2ToParking);
+        return Paths.line(shoot2ToHive2, hive2ToParking).linear(shoot2ToHive2, hive2ToParking);
     }
 }
