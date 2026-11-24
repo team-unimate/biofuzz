@@ -62,9 +62,7 @@ public class stealAnd3Hives extends CommandOpMode {
 
 
     private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = alliance == Field.Alliance.RED
-                ? PoseFactory.degrees().mirrorAroundPoint(Field.CENTER_X, Field.CENTER_Y)
-                : PoseFactory.degrees();
+        PoseFactory poseFactory = Field.blueRoutePoses(alliance);
 
 
         start = poseFactory.of(86, 133, 180);

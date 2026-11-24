@@ -56,9 +56,7 @@ public class fullSoloAndPark extends CommandOpMode {
     private  Pose shootToPark;
 
     private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = alliance == Field.Alliance.RED
-                ? PoseFactory.degrees().mirrorAroundPoint(Field.CENTER_X, Field.CENTER_Y)
-                : PoseFactory.degrees();
+        PoseFactory poseFactory = Field.blueRoutePoses(alliance);
         start = poseFactory.of(86.7, 133.8, 0);
         initToGarden = poseFactory.of(132.9873, 133.1039, 0.1951);
         gardenAdjustAngleStart = poseFactory.of(132.9873, 133.1039, 0);

@@ -1,9 +1,10 @@
 package org.firstinspires.ftc.teamcode.field;
 
+import com.pedropathing.api.PoseFactory;
 import com.pedropathing.math.Pose;
 
 public class Field {
-    public static final double WIDTH = 144;
+    public static final double WIDTH = 141.5;
     public static final double CENTER_X = WIDTH / 2;
     public static final double CENTER_Y = WIDTH / 2;
 
@@ -16,6 +17,15 @@ public class Field {
 
     public enum Alliance {
         RED, BLUE
+    }
+
+    /**
+     * Creates poses from blue route coordinates and headings in degrees. The BIOBUZZ gardens
+     * and loading zones are on opposite ends of the field, so red routes use a half-turn.
+     */
+    public static PoseFactory blueRoutePoses(Alliance alliance) {
+        PoseFactory poses = PoseFactory.degrees();
+        return alliance == Alliance.RED ? poses.mirrorAroundPoint(CENTER_X, CENTER_Y) : poses;
     }
 
     /**
