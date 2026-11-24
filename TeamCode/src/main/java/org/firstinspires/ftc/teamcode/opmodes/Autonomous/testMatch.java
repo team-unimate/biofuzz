@@ -42,10 +42,8 @@ public class testMatch extends CommandOpMode {
     private Pose startToPark;
     private Pose startToParkControl1;
 
-    private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = alliance == Field.Alliance.RED
-                ? PoseFactory.degrees().mirrorAroundPoint(Field.CENTER_X, Field.CENTER_Y)
-                : PoseFactory.degrees();
+    void buildPoses(Field.Alliance alliance) {
+        PoseFactory poseFactory = Field.blueRoutePoses(alliance);
         start = poseFactory.of(102, 133, -90);
         startToParkStart = poseFactory.of(102, 132.9127, -90);
         startToPark = poseFactory.of(129.8212, 48.0017, 300);

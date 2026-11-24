@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.opmodes.Autonomous;
 import static org.firstinspires.ftc.teamcode.opmodes.Autonomous.testMatch.AIM_TIMEOUT_MS;
 
 import com.pedropathing.api.Paths;
-
 import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
@@ -42,29 +41,21 @@ public class autoPath extends CommandOpMode {
     private Shooter shooter;
     private Field.Alliance alliance;
     private Pose start;
-    private Pose initGardenStart;
     private Pose initGarden;
-    private Pose gardenToShoot1;
-    private Pose shoot1ToHive1;
-    private Pose hive1ToShoot2Start;
+    private Path shoot1ToHive1Path;
     private Pose hive1ToShoot2;
     private Pose shoot2ToHive2;
-    private Pose hive2ToParkingStart;
     private Pose hive2ToParking;
 
-    private void buildPoses(Field.Alliance alliance) {
-        PoseFactory poseFactory = alliance == Field.Alliance.RED
-                ? PoseFactory.degrees().mirrorAroundPoint(Field.CENTER_X, Field.CENTER_Y)
-                : PoseFactory.degrees();
+    void buildPoses(Field.Alliance alliance) {
+        PoseFactory poseFactory = Field.blueRoutePoses(alliance);
         start = poseFactory.of(86.7, 133.8, 0);
-        initGardenStart = poseFactory.of(86.7    , 133.8594, 0);
         initGarden = poseFactory.of(134.4499, 134.1784, 0);
-        gardenToShoot1 = poseFactory.of(97.9289, 23.6729, -100);
-        shoot1ToHive1 = poseFactory.of(96.9, 13.0, -100.0781);
-        hive1ToShoot2Start = poseFactory.of(95.9072, 12.2983, -100);
+        Pose shoot1 = poseFactory.of(97.9289, 23.6729, 0);
+        Pose hive1 = poseFactory.of(96.9, 13.0, 0);
+        shoot1ToHive1Path = Paths.line(shoot1, hive1).tangent();
         hive1ToShoot2 = poseFactory.of(100.3939, 31.8151, 30);
-        shoot2ToHive2 = poseFactory.of(127 , 92.6, 10);
-        hive2ToParkingStart = poseFactory.of(128.4241, 92.6001, 0);
+        shoot2ToHive2 = poseFactory.of(127, 92.6, 10);
         hive2ToParking = poseFactory.of(128.988, 51.9602, -90);
     }
 
@@ -79,6 +70,7 @@ public class autoPath extends CommandOpMode {
                 new intakeOn(intake),
                 new FollowPathCommand(follower, initGarden()),
                 new intakeOff(intake),
+                new FollowPathCommand(follower, gardenToShoot1()),
                 new FollowPathCommand(follower, shoot1ToHive1()),
                 new InstantCommand(() -> shooter.setState(Shooter.State.FIXED)),
                 new intakeShooting(intake, shooter),
@@ -119,7 +111,8 @@ public class autoPath extends CommandOpMode {
         turret = new Turret(hardwareMap, limelight, history, follower::pose);
         shooter = new Shooter(hardwareMap, turret::getDistance);
         intake = new Intake(hardwareMap);
-        register(limelight, turret, shooter);
+        intakeFlower = new IntakeFlower(hardwareMap);
+        register(limelight, turret, shooter, intakeFlower);
         alliance = PosePersistency.getAlliance(Field.Alliance.BLUE);
     }
 
@@ -178,19 +171,21 @@ public class autoPath extends CommandOpMode {
         PosePersistency.savePose(follower.pose());
     }
     public Path initGarden() {
-        return Paths.line(initGardenStart, initGarden).linear(initGardenStart, initGarden);
+        return Paths.line(start, initGarden).linear(start, initGarden);
     }
 
     public Path gardenToShoot1() {
-        return Paths.line(initGarden, gardenToShoot1).linear(initGarden, gardenToShoot1);
+        Pose shoot1 = shoot1ToHive1Path.get(0);
+        return Paths.line(initGarden, shoot1).linear(initGarden, shoot1);
     }
 
     public Path shoot1ToHive1() {
-        return Paths.line(gardenToShoot1, shoot1ToHive1).tangent();
+        return shoot1ToHive1Path;
     }
 
     public Path hive1ToShoot2() {
-        return Paths.line(hive1ToShoot2Start, hive1ToShoot2).linear(hive1ToShoot2Start, hive1ToShoot2);
+        Pose hive1 = shoot1ToHive1Path.endPose();
+        return Paths.line(hive1, hive1ToShoot2).linear(hive1, hive1ToShoot2);
     }
 
     public Path shoot2ToHive2() {
@@ -198,6 +193,6 @@ public class autoPath extends CommandOpMode {
     }
 
     public Path hive2ToParking() {
-        return Paths.line(hive2ToParkingStart, hive2ToParking).linear(hive2ToParkingStart, hive2ToParking);
+        return Paths.line(shoot2ToHive2, hive2ToParking).linear(shoot2ToHive2, hive2ToParking);
     }
 }
